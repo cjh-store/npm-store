@@ -13,5 +13,6 @@
     "dayjs": "^1.10.6",
     "inquirer": "^8.1.2",
     "simple-git": "^2.45.0"
-  }
+  },
+  "dependencies": {}
 }
