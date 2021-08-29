@@ -7,5 +7,5 @@
   "bin": {
     "cc-cli-run": "bin/index.js"
   },
-  "gitHead": "260cc347ff2fbd7292c551398f8d9e1553fb798e"
+  "gitHead": "6a6d20848498b68f89917fed02468cc37f08512c"
 }
