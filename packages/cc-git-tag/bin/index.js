@@ -1,4 +1,4 @@
-#! /usr/bin/env node
+#!/usr/bin/env node
 "use strict";
 const chalk = require("chalk");
 var dayjs = require("dayjs");
