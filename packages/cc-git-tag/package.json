@@ -7,6 +7,9 @@
     "cc-git-tag": "bin/index.js"
   },
   "gitHead": "6a6d20848498b68f89917fed02468cc37f08512c",
+  "scripts": {
+    "test": "./bin/index.js"
+  },
   "devDependencies": {
     "bump-regex": "^4.1.0",
     "chalk": "^4.1.2",

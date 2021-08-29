@@ -34,20 +34,21 @@ const promptList = [
     ],
   },
 ];
-
-inquirer
-  .prompt(promptList)
-  .then((res) => {
-    addTag(res.type);
-    // Use user feedback for... whatever!!
-  })
-  .catch((error) => {
-    if (error.isTtyError) {
-      // Prompt couldn't be rendered in the current environment
-    } else {
-      // Something else went wrong
-    }
-  });
+function selectVersion() {
+  inquirer
+    .prompt(promptList)
+    .then((res) => {
+      addTag(res.type);
+      // Use user feedback for... whatever!!
+    })
+    .catch((error) => {
+      if (error.isTtyError) {
+        // Prompt couldn't be rendered in the current environment
+      } else {
+        // Something else went wrong
+      }
+    });
+}
 
 function addTag(type) {
   Git(GIT_PATH)
@@ -85,3 +86,5 @@ function addTag(type) {
       );
     });
 }
+
+selectVersion()
