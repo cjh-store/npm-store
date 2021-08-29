@@ -8,6 +8,6 @@
     "packages/*"
   ],
   "scripts": {
-    "prepublish": ""
+    "lerna:publish": "lerna publish"
   }
 }
