@@ -6,5 +6,6 @@
   "author": "ChenJunHong",
   "bin": {
     "cc-cli-run": "bin/index.js"
-  }
+  },
+  "gitHead": "d190c59600a224f7fe5954b2f383f1f43d2414cb"
 }
