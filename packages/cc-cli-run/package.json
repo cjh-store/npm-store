@@ -1,0 +1,12 @@
+{
+  "name": "cc-cli-run",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "ChenJunHong",
+  "bin": {
+    "cc-cli-run": "bin/index.js"
+  },
+  "dependencies": {
+  }
+}
