@@ -9,6 +9,9 @@
       "exact": true,
       "ignoreChanges": ["**/*.md"],
       "message": "build: release version %v"
+    },
+    "bootstrap": {
+      "hoist": true
     }
   }
 }

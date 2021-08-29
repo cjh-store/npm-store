@@ -1,0 +1,17 @@
+{
+  "name": "cc-git-tag",
+  "version": "0.0.0",
+  "license": "MIT",
+  "author": "ChenJunHong <1054535289@qq.com>",
+  "bin": {
+    "cc-git-tag": "bin/index.js"
+  },
+  "gitHead": "6a6d20848498b68f89917fed02468cc37f08512c",
+  "devDependencies": {
+    "bump-regex": "^4.1.0",
+    "chalk": "^4.1.2",
+    "dayjs": "^1.10.6",
+    "inquirer": "^8.1.2",
+    "simple-git": "^2.45.0"
+  }
+}

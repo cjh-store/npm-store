@@ -1,9 +1,8 @@
 {
   "name": "cc-cli-run",
   "version": "0.0.1",
-  "main": "index.js",
   "license": "MIT",
-  "author": "ChenJunHong",
+  "author": "ChenJunHong <1054535289@qq.com>",
   "bin": {
     "cc-cli-run": "bin/index.js"
   },
