@@ -6,7 +6,5 @@
   "author": "ChenJunHong",
   "bin": {
     "cc-cli-run": "bin/index.js"
-  },
-  "dependencies": {
   }
 }
