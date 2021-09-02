@@ -17,7 +17,7 @@ const promptList = [
     name: "type",
     choices: [
       {
-        name: "主版本号：重大更新版本,为零时表示软件还在开发阶段",
+        name: "主版本号：重大更新版本,第一次发布正式版选这个",
         value: "major",
       },
       {
@@ -55,20 +55,19 @@ function addTag(type) {
   Git(GIT_PATH)
     .pull()
     .tags(function (err, tags) {
+      
       var oldVersion = tags.latest;
-      oldVersion = oldVersion ? oldVersion.substr(1, oldVersion.length) : "";
+      oldVersion = oldVersion ? oldVersion.slice(1,oldVersion.lastIndexOf('.')): "0.0.0";
       Bump(
         {
           str:
-            "version:" + oldVersion
-              ? oldVersion.substr(1, oldVersion.length)
-              : "",
+            "version:" + oldVersion,
           type,
         },
         function (err, out) {
           //产生新代码
-          newVersion = oldVersion ? "v" + out.new : "v1.0.0";
-          //产生新标签的备注
+          newVersion =  `v${out.new}.${dayjs().format('YYMMDD')}`
+         // 产生新标签的备注
           versionHint =
             "Relase version " +
             newVersion +
@@ -79,7 +78,7 @@ function addTag(type) {
             Git(GIT_PATH).pushTags("origin", function () {
               console.log(
                 "🔖 当前生成tag版本号为:",
-                chalk.white.bgGreen.bold(newVersion)
+                chalk.white.bgBlue.bold(' '+newVersion+' ') 
               );
             });
           });
