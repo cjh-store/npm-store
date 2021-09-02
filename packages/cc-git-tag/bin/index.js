@@ -61,7 +61,9 @@ function selectTag() {
     .tags(function (err, tags) {
       
       oldVersion = tags.latest;
-      oldVersion = oldVersion ? oldVersion.slice(1,oldVersion.lastIndexOf('.')): "0.0.0";
+      if(oldVersion){
+        oldVersion.length>=13?oldVersion.slice(1,oldVersion.lastIndexOf('.')):oldVersion.substr(1, oldVersion.length)
+      }
       promptList[0].choices.forEach( (e,i)=>{
         Bump(
           {
@@ -96,7 +98,7 @@ function addTag(type){
       newVersion =  `v${out.new}.${dayjs().format('YYMMDD')}`
      // 产生新标签的备注
       versionHint =
-        "Release version " +
+        "Relase version " +
         newVersion +
         " 发布于 " +
         dayjs().format("YYYY年MM月DD日  HH:mm:ss");
