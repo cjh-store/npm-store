@@ -58,13 +58,16 @@ function selectVersion() {
 }
 
 function selectTag() {
-  Git(GIT_PATH)
-    .pull()
+    Git(GIT_PATH)
+    .pull((err)=>{
+       console.log('err => ',err)
+    })
     .tags(function (err, tags) {
-      
       oldVersion = tags.latest;
       if(oldVersion){
         oldVersion.length>=13?oldVersion.slice(1,oldVersion.lastIndexOf('.')):oldVersion.substr(1, oldVersion.length)
+      }else{
+        oldVersion='0.0.0'
       }
       promptList[0].choices.forEach( (e,i)=>{
         Bump(
@@ -110,7 +113,11 @@ function addTag(type){
           exec('clip').stdin.end(iconv.encode(newVersion, 'gbk'));
           console.log(
             "🔖 当前生成tag版本号为:",
-            chalk.white.bgBlue.bold(' '+newVersion+' ✔️已粘贴到剪贴板') 
+            chalk.white.bgBlue.bold(' '+newVersion+' ') 
+          );
+          console.log(
+            "✔️ ",
+            chalk.white.bgGreen.bold('版本号已复制到剪贴板') 
           );
         });
       });
