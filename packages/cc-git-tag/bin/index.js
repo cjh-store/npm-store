@@ -7,6 +7,8 @@ const Git = require("simple-git");
 const GIT_PATH = __dirname;
 const Bump = require("bump-regex");
 const inquirer = require("inquirer");
+const { exec } = require('child_process');
+const iconv = require('iconv-lite');
 
 let newVersion,//新标签
     oldVersion,
@@ -105,9 +107,10 @@ function addTag(type){
 
       Git(GIT_PATH).addAnnotatedTag(newVersion, versionHint, function () {
         Git(GIT_PATH).pushTags("origin", function () {
+          exec('clip').stdin.end(iconv.encode(newVersion, 'gbk'));
           console.log(
             "🔖 当前生成tag版本号为:",
-            chalk.white.bgBlue.bold(' '+newVersion+' ') 
+            chalk.white.bgBlue.bold(' '+newVersion+' ✔️已粘贴到剪贴板') 
           );
         });
       });
