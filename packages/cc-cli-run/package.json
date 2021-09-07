@@ -6,5 +6,9 @@
   "bin": {
     "cc-cli-run": "bin/index.js"
   },
-  "gitHead": "6a6d20848498b68f89917fed02468cc37f08512c"
+  "gitHead": "6a6d20848498b68f89917fed02468cc37f08512c",
+  "dependencies": {
+    "consola": "^2.15.3",
+    "enquirer": "^2.3.6"
+  }
 }
