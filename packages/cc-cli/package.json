@@ -1,6 +1,6 @@
 {
   "name": "cc-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "商化前端脚手架",
   "main": "index.js",
   "scripts": {
@@ -26,7 +26,6 @@
     "inquirer": "^8.1.2",
     "ora": "^4.0.3"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git"
   }
