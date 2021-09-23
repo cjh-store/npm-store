@@ -1,6 +1,6 @@
 {
   "name": "cc-cli",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "商化前端脚手架",
   "main": "index.js",
   "scripts": {
