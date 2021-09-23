@@ -7,11 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": {
-    "name": "陈俊宏",
-    "email": "1054535289@qq.com"
-  },
-  "license": "ISC",
+  "author": "ChenJunHong <1054535289@qq.com>",
+  "license": "MIT",
   "bin": {
     "cc-cli": "./src/index.js"
   },
@@ -28,5 +25,6 @@
   },
   "repository": {
     "type": "git"
-  }
+  },
+  "gitHead": "6bac6f729efe578112c17a77e54610ae4c18d921"
 }
