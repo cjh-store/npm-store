@@ -6,7 +6,7 @@
   "bin": {
     "cc-git-tag": "bin/index.js"
   },
-  "gitHead": "16d9c1b99be94e7d718a68e56fefaf96eab1723a",
+  "gitHead": "e801a50696717cabf86f5bfa56304f07bf38c660",
   "dependencies": {
     "bump-regex": "^4.1.0",
     "chalk": "^4.1.2",
