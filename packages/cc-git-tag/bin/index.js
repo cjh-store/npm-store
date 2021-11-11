@@ -107,7 +107,8 @@ function addTag(type){
         newVersion +
         " 发布于 " +
         dayjs().format("YYYY年MM月DD日  HH:mm:ss");
-
+        console.log('切换分支');
+        checkoutDevelop()
       Git(GIT_PATH).addAnnotatedTag(newVersion, versionHint, function () {
         Git(GIT_PATH).pushTags("origin", function () {
           exec('clip').stdin.end(iconv.encode(newVersion, 'gbk'));
@@ -119,10 +120,32 @@ function addTag(type){
             "✔️ ",
             chalk.white.bgGreen.bold('版本号已复制到剪贴板') 
           );
+          checkoutDevelop()
+
         });
       });
     }
   );
+}
+
+function checkoutDevelop(){
+  inquirer.prompt([
+    { 
+      type: 'confirm',
+      name: 'flag',
+      message: '是否需要切换回develop分支?',
+    }
+  ]).then(({flag})=>{
+    if(flag){
+      Git(GIT_PATH).checkout('develop').then(res=>{
+          console.log(
+            "🔀 ",
+            '注意: 分支已经自动切换为develop分支'
+          );
+        })
+    }
+  });
+ 
 }
 
 selectTag()
