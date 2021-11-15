@@ -109,7 +109,7 @@ function addTag(type) {
         dayjs().format("YYYY年MM月DD日  HH:mm:ss");
       Git(GIT_PATH).addAnnotatedTag(newVersion, versionHint, function () {
         Git(GIT_PATH).pushTags("origin", function () {
-          exec("clip").stdin.end(iconv.encode(newVersion, "gbk"));
+          exec("clip").stdin.end(iconv.encode('版本号-'+newVersion, "gbk"));
           console.log(
             "🔖 当前生成tag版本号为:",
             chalk.white.bgBlue.bold(" " + newVersion + " ")
@@ -141,7 +141,5 @@ function checkoutDevelop() {
       }
     });
 }
-
-
 
 selectTag()
