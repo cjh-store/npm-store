@@ -1,6 +1,6 @@
 {
   "name": "cc-git-tag",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "license": "MIT",
   "author": "ChenJunHong <1054535289@qq.com>",
   "bin": {
