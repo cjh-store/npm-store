@@ -13,5 +13,8 @@
     "bootstrap": {
       "hoist": true
     }
+  },
+  "registries": {
+    "npm": "https://registry.npmjs.org/"
   }
 }

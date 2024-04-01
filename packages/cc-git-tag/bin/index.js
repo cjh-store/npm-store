@@ -142,4 +142,4 @@ function checkoutDevelop() {
     });
 }
 
-selectTag();
+selectTag()
