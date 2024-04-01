@@ -137,7 +137,7 @@ function checkoutDevelop() {
           .checkout("develop")
           .then((res) => {
             console.log("🔀 ", "注意: 分支已经自动切换为develop分支");
-          })
+          });
       }
     });
 }
