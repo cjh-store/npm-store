@@ -79,7 +79,7 @@ function selectTag() {
           },
           function (err, out) {
             //产生新代码
-            let newTag = `v${out.new}.${dayjs().format("YYMMDD")}`;
+            let newTag = `v${out.new}.${dayjs().format("YYMMDDHHmm")}`;
             if (i == 0 || i == 1) {
               e.name = `${e.name.slice(0, 4)}(${out.new})${e.name.slice(4)}`;
             } else {
@@ -100,7 +100,7 @@ function addTag(type) {
     },
     function (err, out) {
       //产生新代码
-      newVersion = `v${out.new}.${dayjs().format("YYMMDD")}`;
+      newVersion = `v${out.new}.${dayjs().format("YYMMDDHHmm")}`;
       // 产生新标签的备注
       versionHint =
         "Relase version " +
@@ -109,7 +109,7 @@ function addTag(type) {
         dayjs().format("YYYY年MM月DD日  HH:mm:ss");
       Git(GIT_PATH).addAnnotatedTag(newVersion, versionHint, function () {
         Git(GIT_PATH).pushTags("origin", function () {
-          exec("clip").stdin.end(iconv.encode('版本号-'+newVersion, "gbk"));
+          exec("clip").stdin.end(iconv.encode("版本号-" + newVersion, "gbk"));
           console.log(
             "🔖 当前生成tag版本号为:",
             chalk.white.bgBlue.bold(" " + newVersion + " ")
@@ -142,4 +142,4 @@ function checkoutDevelop() {
     });
 }
 
-selectTag()
+selectTag();
