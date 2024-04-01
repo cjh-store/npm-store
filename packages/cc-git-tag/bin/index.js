@@ -100,7 +100,7 @@ function addTag(type) {
     },
     function (err, out) {
       //产生新代码
-      newVersion = `v${out.new}.${dayjs().format("YYMMDD")}`;
+      newVersion = `v${out.new}.${dayjs().format("YYMMDDHHmm")}`;
       // 产生新标签的备注
       versionHint =
         "Relase version " +
