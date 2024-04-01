@@ -115,7 +115,7 @@ function addTag(type) {
             chalk.white.bgBlue.bold(" " + newVersion + " ")
           );
           console.log("✔️ ", chalk.white.bgGreen.bold("版本号已复制到剪贴板"));
-          checkoutDevelop()
+          checkoutDevelop();
         });
       });
     }
