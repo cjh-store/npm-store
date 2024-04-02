@@ -79,7 +79,7 @@ function selectTag() {
           },
           function (err, out) {
             //产生新代码
-            let newTag = `v${out.new}.${dayjs().format("YYMMDDHHmm")}`;
+            let newTag = `v${out.new}.${dayjs().format("YYMMDD_HHmm")}`;
             if (i == 0 || i == 1) {
               e.name = `${e.name.slice(0, 4)}(${out.new})${e.name.slice(4)}`;
             } else {
@@ -100,7 +100,7 @@ function addTag(type) {
     },
     function (err, out) {
       //产生新代码
-      newVersion = `v${out.new}.${dayjs().format("YYMMDDHHmm")}`;
+      newVersion = `v${out.new}.${dayjs().format("YYMMDD_HHmm")}`;
       // 产生新标签的备注
       versionHint =
         "Relase version " +
