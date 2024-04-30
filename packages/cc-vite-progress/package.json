@@ -1,6 +1,6 @@
 {
   "name": "cc-vite-progress",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A progress bar plugin for Vite.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
