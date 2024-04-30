@@ -51,5 +51,6 @@
     "picocolors": "^1.0.0",
     "progress": "^2.0.3",
     "rd": "^2.0.1"
-  }
+  },
+  "gitHead": "49682fd8ed089d423756f2d2f02e5fbb2f7fa5a2"
 }
