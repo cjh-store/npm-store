@@ -8,6 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "lerna:publish": "lerna publish"
+    "lerna:publish": "lerna publish",
+    "switch:taobao": "yarn config set registry https://registry.npmmirror.com/",
+    "switch:npm": "yarn config set registry https://registry.npmjs.org/"
   }
 }
