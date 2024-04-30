@@ -173,7 +173,7 @@ export default function viteProgressBar(options?: PluginOptions): PluginOption {
         },
         buildStart(){
             stream.write(
-                `${colors.blue(colors.bold(`启鸣达人提示：打包开始了，请耐心等待...`))}`
+                `${colors.blue(colors.bold(`启鸣达人提示：打包开始了，请耐心等待.......`))}`
             );
         },
         // catch error info
