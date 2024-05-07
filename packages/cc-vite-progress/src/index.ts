@@ -187,7 +187,9 @@ export default function viteProgressBar(options?: PluginOptions): PluginOption {
         `${colors.blue(
           colors.bold(
             `启鸣达人提示：${
-              options?.projectName ? options.projectName + "项目" : ""
+              options?.projectName
+                ? "[" + options.projectName + "] " + "项目"
+                : ""
             }打包开始了，请耐心等待.....`
           )
         )}`
