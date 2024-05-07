@@ -190,7 +190,7 @@ export default function viteProgressBar(options?: PluginOptions): PluginOption {
               options?.projectName
                 ? "[" + options.projectName + "] " + "项目"
                 : ""
-            }打包开始了，请耐心等待.....`
+            }打包开始了，请耐心等待....`
           )
         )}`
       );

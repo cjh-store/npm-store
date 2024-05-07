@@ -8,7 +8,7 @@
     "packages/*"
   ],
   "scripts": {
-    "lerna:all": "run-p switch:npm lerna:publish switch:taobao",
+    "lerna:all": "run-p switch:npm lerna:publish",
     "lerna:publish": "lerna publish",
     "switch:taobao": "yarn config set registry https://registry.npmmirror.com/",
     "switch:npm": "yarn config set registry https://registry.npmjs.org/"
