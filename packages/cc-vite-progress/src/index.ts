@@ -113,7 +113,7 @@ export default function viteProgressBar(options?: PluginOptions): PluginOption {
         const barFormat =
           options.format ||
           `${colors.green(
-            "Building"
+            "编译中"
           )} ${barText} :percent | ${transforming}${chunks}Time: :elapseds`;
 
         delete options.format;
@@ -183,6 +183,7 @@ export default function viteProgressBar(options?: PluginOptions): PluginOption {
       return null;
     },
     buildStart() {
+      stream.write("\n");
       stream.write(
         `${colors.blue(
           colors.bold(
@@ -194,6 +195,7 @@ export default function viteProgressBar(options?: PluginOptions): PluginOption {
           )
         )}`
       );
+      stream.write("\n");
     },
     // catch error info
     buildEnd(err) {
