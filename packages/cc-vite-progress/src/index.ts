@@ -65,7 +65,7 @@ interface PluginOptions {
    */
   // eslint-disable-next-line @typescript-eslint/ban-types
   callback?: Function | undefined;
-  projectName: String;
+  projectName?: String | undefined;
 }
 
 export default function viteProgressBar(options?: PluginOptions): PluginOption {
