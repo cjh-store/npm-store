@@ -1,6 +1,6 @@
 {
   "name": "@cjh/git-pro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Git workflow enhancement tool",
   "main": "dist/index.js",
   "bin": {
