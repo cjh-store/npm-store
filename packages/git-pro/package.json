@@ -1,5 +1,5 @@
 {
-  "name": "@cjh/git-pro",
+  "name": "@cjh0/git-pro",
   "version": "1.0.4",
   "description": "Git workflow enhancement tool,前端团队git工具!!!",
   "main": "dist/index.js",
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "ts-node src/index.ts",
-    "build": "tsc",
+    "build": "tsc && javascript-obfuscator dist --output dist > nul ",
     "prepare": "yarn build"
   },
   "keywords": [
@@ -30,6 +30,7 @@
   "devDependencies": {
     "@types/inquirer": "^8.2.5",
     "@types/node": "^20.5.0",
+    "javascript-obfuscator": "^4.1.1",
     "typescript": "^5.1.6"
   },
   "gitHead": "8105bb627c1ce9a7107b3d35652858dbb5fa7b68"
