@@ -90,3 +90,5 @@ lib
 gitmojis.json
 /lerna-debug.log
 tmp
+
+dist

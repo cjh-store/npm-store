@@ -1,0 +1,35 @@
+{
+  "name": "@cjh/git-pro",
+  "version": "1.0.0",
+  "description": "Git workflow enhancement tool",
+  "main": "dist/index.js",
+  "bin": {
+    "git-pro": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "prepare": "yarn build"
+  },
+  "keywords": [
+    "git",
+    "cli",
+    "workflow"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.3",
+    "clipboardy": "^4.0.0",
+    "commander": "^11.0.0",
+    "iconv-lite": "^0.6.3",
+    "inquirer": "^8.2.5",
+    "simple-git": "^3.19.1"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^8.2.5",
+    "@types/node": "^20.5.0",
+    "typescript": "^5.1.6"
+  }
+}
