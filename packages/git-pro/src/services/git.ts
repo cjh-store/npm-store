@@ -215,7 +215,7 @@ export class GitService {
         head: ["cyan"],
         border: ["grey"],
       },
-      colWidths: [30, 15, 15], // 设置每列的固定宽度
+      colWidths: [30, 30, 30], // 设置每列的固定宽度
       wordWrap: true,
     };
 
