@@ -66,6 +66,9 @@ export function fetchEventSource(
 
     inputSignal?.addEventListener("abort", () => {
       isAborting = true;
+      if (curRequestController) {
+        curRequestController.abort();
+      }
       dispose();
       resolve();
     });
@@ -74,12 +77,25 @@ export function fetchEventSource(
     const onopen = inputOnOpen ?? defaultOnOpen;
 
     async function create() {
+      // 创建一个新的 AbortController
       curRequestController = new AbortController();
+
+      // 如果外部已经请求中止，直接返回
+      if (inputSignal?.aborted) {
+        isAborting = true;
+        dispose();
+        resolve();
+        return;
+      }
+
       try {
         const response = await fetch(input, {
           ...rest,
           headers,
-          signal: curRequestController.signal,
+          // 使用外部和内部的 signal 组合
+          signal: inputSignal
+            ? composeSignals(inputSignal, curRequestController.signal)
+            : curRequestController.signal,
         });
 
         await onopen(response);
@@ -121,12 +137,43 @@ export function fetchEventSource(
             dispose();
             reject(innerErr);
           }
+        } else if (inputSignal?.aborted) {
+          // 如果是外部 abort 触发的，直接 resolve
+          resolve();
         }
       }
     }
 
     create();
   });
+}
+
+// 组合两个 signal
+function composeSignals(
+  signal1: AbortSignal,
+  signal2: AbortSignal
+): AbortSignal {
+  const controller = new AbortController();
+
+  function onAbort() {
+    controller.abort();
+    cleanup();
+  }
+
+  function cleanup() {
+    signal1.removeEventListener("abort", onAbort);
+    signal2.removeEventListener("abort", onAbort);
+  }
+
+  signal1.addEventListener("abort", onAbort);
+  signal2.addEventListener("abort", onAbort);
+
+  // 如果任一信号已经是 aborted 状态，立即中止
+  if (signal1.aborted || signal2.aborted) {
+    controller.abort();
+  }
+
+  return controller.signal;
 }
 
 function defaultOnOpen(response: Response) {
