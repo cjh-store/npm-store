@@ -1,6 +1,6 @@
 {
   "name": "@cjh0/git-pro",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Git workflow enhancement tool,前端团队git工具!!!",
   "main": "dist/index.js",
   "bin": {
@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc && javascript-obfuscator dist --output dist > nul ",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "postpublish": "npm publish --access public && npx npm-mirror-sync"
   },
   "keywords": [
     "git",
@@ -23,6 +24,7 @@
     "cli-table3": "^0.6.3",
     "clipboardy": "^4.0.0",
     "commander": "^11.0.0",
+    "dayjs": "^1.11.13",
     "iconv-lite": "^0.6.3",
     "inquirer": "^8.2.5",
     "simple-git": "^3.19.1"

@@ -17,9 +17,6 @@ export class TagService {
     this.git = simpleGit();
   }
 
-  /**
-   * 解析版本号
-   */
   private parseVersion(version: string | null): string {
     if (!version) return "0.0.0";
     return version.length >= 13
@@ -27,9 +24,6 @@ export class TagService {
       : version.slice(1);
   }
 
-  /**
-   * 根据类型生成新版本号
-   */
   private generateNewVersion(currentVersion: string, type: string): string {
     const [major, minor, patch] = currentVersion.split(".").map(Number);
 
@@ -47,9 +41,6 @@ export class TagService {
     }
   }
 
-  /**
-   * 获取版本选择列表
-   */
   private async getVersionChoices(
     latestVersion: string
   ): Promise<VersionBumpChoice[]> {
@@ -82,9 +73,6 @@ export class TagService {
     }));
   }
 
-  /**
-   * 创建新标签
-   */
   public async createTag(): Promise<void> {
     try {
       // 1. 先拉取最新代码
@@ -107,23 +95,38 @@ export class TagService {
         },
       ]);
 
-      // 4. 生成新版本号
+      // 4. 输入标签描述
+      const { description } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "description",
+          message: "📝  请输入标签描述信息:",
+          validate: (input: string) => {
+            if (!input.trim()) {
+              return "描述信息不能为空";
+            }
+            return true;
+          },
+        },
+      ]);
+
+      // 5. 生成新版本号
       const newVersion = this.generateNewVersion(latestVersion, type);
       const tagVersion = `v${newVersion}.${dayjs().format("YYMMDD_HHmm")}`;
-      const tagMessage = `🎉 Release version ${tagVersion} 发布于 ${dayjs().format(
+      const tagMessage = `🔖 ${description}\n\n发布版本: ${tagVersion}\n发布时间: ${dayjs().format(
         "YYYY年MM月DD日 HH:mm:ss"
       )}`;
 
-      // 5. 创建并推送标签
+      // 6. 创建并推送标签
       Logger.info("📤  正在创建并推送标签...");
       await this.git.addAnnotatedTag(tagVersion, tagMessage);
       await this.git.pushTags("origin");
 
-      // 6. 提示成功
+      // 7. 提示成功
       Logger.success(`🔖  新标签 ${chalk.bold(tagVersion)} 已创建并推送`);
       await this.copyToClipboard(tagVersion);
 
-      // 7. 询问是否切换回develop分支
+      // 8. 询问是否切换回develop分支
       const { switchBranch } = await inquirer.prompt([
         {
           type: "confirm",
@@ -135,7 +138,6 @@ export class TagService {
 
       if (switchBranch) {
         try {
-          // 先检查分支是否存在
           const branches = await this.git.branch();
           if (!branches.all.includes("develop")) {
             Logger.warn("⚠️ develop分支不存在，请检查分支名称是否正确");

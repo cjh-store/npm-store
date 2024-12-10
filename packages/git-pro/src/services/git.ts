@@ -113,11 +113,17 @@ export class GitService {
   private async getStagedFiles(): Promise<StagedFile[]> {
     const status = await this.git.status();
     const stagedFiles: StagedFile[] = [];
+    // 使用 Set 来存储已处理的文件路径
+    const processedFiles = new Set<string>();
 
     for (const file of status.staged) {
-      let diff = "";
+      // 如果文件已经处理过，则跳过
+      if (processedFiles.has(file)) {
+        continue;
+      }
+
       try {
-        diff = await this.git.diff(["--cached", "--", file]);
+        const diff = await this.git.diff(["--cached", "--", file]);
         const changedLines = this.calculateFileChangedLines(diff);
         stagedFiles.push({
           path: file,
@@ -125,6 +131,8 @@ export class GitService {
           diff,
           changedLines,
         });
+        // 将文件标记为已处理
+        processedFiles.add(file);
       } catch (error) {
         Logger.error(`无法获取文件 ${file} 的改动信息`);
       }
@@ -139,12 +147,15 @@ export class GitService {
   private async getFileStatus(file: string): Promise<string> {
     const status = await this.git.status();
 
-    const renamedFiles = status.renamed.map((rename) => rename.to);
-    if (renamedFiles.includes(file)) return "renamed";
+    // 检查是否是重命名文件
+    const isRenamed = status.renamed.some((rename) => rename.to === file);
+    if (isRenamed) return "renamed";
 
+    // 根据文件在不同数组中的位置确定其最终状态
     if (status.created.includes(file)) return "new file";
-    if (status.modified.includes(file)) return "modified";
     if (status.deleted.includes(file)) return "deleted";
+    if (status.modified.includes(file)) return "modified";
+
     return "changed";
   }
 
