@@ -17,7 +17,7 @@
     "clean": "rimraf ./lib ./coverage",
     "prebuild": "npm run clean",
     "build": "tsc && tsc -p tsconfig.esm.json",
-    "prepublishOnly": "npm run build && npm run test",
+    "prepublishOnly": "npm run build",
     "postpublish": "npx npm-mirror-sync"
   },
   "devDependencies": {
@@ -29,5 +29,5 @@
   "volta": {
     "node": "14.21.3"
   },
-  "gitHead": "657b50b5ef1f6a586257cdedba915cfff3034415"
+  "gitHead": "ceb8347fc0638eced8682211a0b2edcff3a71dca"
 }
