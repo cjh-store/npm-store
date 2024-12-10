@@ -1,7 +1,7 @@
 {
   "name": "@cjh0/git-pro",
   "version": "1.1.5",
-  "description": "Git workflow enhancement tool,前端团队git工具!!",
+  "description": "Git workflow enhancement tool,前端团队git工具!!!",
   "main": "dist/index.js",
   "bin": {
     "git-pro": "./dist/index.js"
@@ -35,5 +35,5 @@
     "javascript-obfuscator": "^4.1.1",
     "typescript": "^5.1.6"
   },
-  "gitHead": "bfb48a5775b327fbdc3a1fff4fcaa29ad2df7180"
+  "gitHead": "39f791eff92ba10bb6d67ef54b447a202112c970"
 }
