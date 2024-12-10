@@ -1,14 +1,20 @@
 {
-  "packages": ["packages/*"],
+  "packages": [
+    "packages/*"
+  ],
   "version": "independent",
   "npmClient": "yarn",
-  "useWorkspaces": true,
   "command": {
     "version": {
       "allowBranch": "master",
       "exact": true,
-      "ignoreChanges": ["**/*.md"],
-      "message": "build: release version %v"
+      "ignoreChanges": [
+        "**/*.md"
+      ],
+      "message": "build: release version %v",
+      "publish": {
+        "access": "public"
+      }
     },
     "bootstrap": {
       "hoist": true

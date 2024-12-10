@@ -1,15 +1,12 @@
 {
   "name": "root",
   "private": true,
-  "devDependencies": {
-    "lerna": "^4.0.0"
-  },
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "lerna:all": "run-p switch:npm lerna:publish",
-    "lerna:publish": "lerna publish ",
+    "lerna:publish": "lerna publish",
     "switch:taobao": "npm config set registry https://registry.npmmirror.com/",
     "switch:npm": " npm config set registry https://registry.npmjs.org/"
   },
@@ -18,5 +15,13 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "command": {
+    "publish": {
+      "access": "public"
+    }
+  },
+  "devDependencies": {
+    "lerna": "^8.1.9"
   }
 }
