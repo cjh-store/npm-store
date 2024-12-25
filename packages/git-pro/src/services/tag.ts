@@ -100,11 +100,9 @@ export class TagService {
         {
           type: "input",
           name: "description",
-          message: "📝  请输入标签描述信息:",
+          message:
+            "📝  请输入描述信息(只有迭代类型的tag必填,一般写任务表迭代名称):",
           validate: (input: string) => {
-            if (!input.trim()) {
-              return "描述信息不能为空";
-            }
             return true;
           },
         },
@@ -113,13 +111,11 @@ export class TagService {
       // 5. 生成新版本号
       const newVersion = this.generateNewVersion(latestVersion, type);
       const tagVersion = `v${newVersion}.${dayjs().format("YYMMDD_HHmm")}`;
-      const tagMessage = `🔖 ${description}\n\n发布版本: ${tagVersion}\n发布时间: ${dayjs().format(
-        "YYYY年MM月DD日 HH:mm:ss"
-      )}`;
+      const tagMessage = `🔖 ${description} `;
 
       // 6. 创建并推送标签
       Logger.info("📤  正在创建并推送标签...");
-      await this.git.addAnnotatedTag(tagVersion, tagMessage);
+      if (tagMessage) await this.git.addAnnotatedTag(tagVersion, tagMessage);
       await this.git.pushTags("origin");
 
       // 7. 提示成功
