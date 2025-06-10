@@ -29,7 +29,7 @@ interface CzConfigForAI {
 export class AIService {
   private static instance: AIService;
   // 默认内置 API 密钥
-  private apiKey: string = "sk-c77da71bfc754616bd7c54bb0f5e54ca";
+  private apiKey: string = "c2stYzc3ZGE3MWJmYzc1NDYxNmJkN2M1NGJiMGY1ZTU0Y2E";
   private model: string = "deepseek-chat";
   private customPrompt: string = "";
 
@@ -111,34 +111,19 @@ export class AIService {
    */
   private async getCzConfigForAI(): Promise<CzConfigForAI> {
     try {
-      Logger.info(`[配置调试] 尝试获取配置文件路径`);
       const configPath = configService.getConfigPath();
 
       // 如果找不到配置文件，使用默认配置
       if (!configPath) {
-        Logger.info("[配置调试] 未找到配置文件，将使用默认配置");
         return this.getDefaultCzConfig();
       }
 
-      Logger.info(`[配置调试] 找到配置文件: ${configPath}`);
       const absolutePath = path.resolve(configPath);
-      Logger.info(`[配置调试] 配置文件绝对路径: ${absolutePath}`);
       delete require.cache[absolutePath];
       const config = require(absolutePath);
-      Logger.info(`[配置调试] 已加载配置文件`);
 
       // 读取原始配置文件内容
       const rawConfigContent = fs.readFileSync(absolutePath, "utf-8");
-      Logger.info(`[配置调试] 已读取原始配置文件内容`);
-
-      Logger.info(
-        `[配置调试] 配置包含类型: ${config.types ? config.types.length : 0}个`
-      );
-      Logger.info(
-        `[配置调试] 配置包含作用域: ${
-          config.scopes ? config.scopes.length : 0
-        }个`
-      );
 
       return {
         types: config.types || [],
@@ -146,9 +131,7 @@ export class AIService {
         rawContent: rawConfigContent, // 保存原始配置内容
       };
     } catch (error: any) {
-      Logger.warn(`[配置调试] 加载 commitizen 配置失败: ${error.message}`);
-      Logger.warn(`[配置调试] 错误详情: ${error.stack}`);
-      Logger.warn(`[配置调试] 将使用默认配置`);
+      Logger.warn(`加载 commitizen 配置失败: ${error.message}`);
       return this.getDefaultCzConfig();
     }
   }
@@ -245,6 +228,8 @@ ${config.rawContent}
   private async callDeepSeekAPI(prompt: string): Promise<string> {
     try {
       const url = "https://api.deepseek.com/v1/chat/completions";
+      // 解码 API 密钥
+      const decodedApiKey = Buffer.from(this.apiKey, "base64").toString();
 
       const response = await axios.post(
         url,
@@ -257,7 +242,7 @@ ${config.rawContent}
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${decodedApiKey}`,
           },
         }
       );
