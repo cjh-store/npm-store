@@ -4,9 +4,9 @@ import { Logger } from "../utils/logger";
 
 export async function commitCommand(): Promise<void> {
   try {
-    // 检查配置文件
-    if (!configService.checkConfig()) {
-      return;
+    // 检查配置文件，但即使没有也可以继续
+    if (!configService.hasConfig()) {
+      Logger.warn("未找到配置文件，将使用默认配置");
     }
 
     // 提交前确认

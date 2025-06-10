@@ -50,28 +50,18 @@ export async function mergeTestCommand(): Promise<void> {
     execSync("git checkout test");
     execSync("git pull origin test");
 
-    // 检查是否有冲突
-    try {
-      execSync(
-        `git merge-tree $(git merge-base HEAD ${currentBranch}) HEAD ${currentBranch}`
-      );
-    } catch {
-      Logger.error(`检测到可能的合并冲突，请手动处理合并操作`);
-      // 切回原分支
-      execSync(`git checkout ${currentBranch}`);
-      return;
-    }
-
-    // 合并当前分支到test
+    // 直接尝试合并，移除预先的冲突检测
     Logger.info(`合并 ${currentBranch} 到 test 分支...`);
     try {
       execSync(`git merge ${currentBranch}`);
     } catch (error: any) {
       Logger.error(`合并失败: ${error.message}`);
+      // 如果发生冲突，提示用户手动处理
+      if (error.message.includes("CONFLICT")) {
+        Logger.error("发生合并冲突，请手动解决冲突后提交");
+      }
       // 中止合并
       execSync("git merge --abort");
-      // 切回原分支
-      execSync(`git checkout ${currentBranch}`);
       return;
     }
 

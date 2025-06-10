@@ -69,9 +69,9 @@ export class GitService {
 
     const configPath = configService.getConfigPath();
     if (!configPath) {
-      throw new Error(
-        "未找到配置文件，请确保项目根目录下存在 .cz-config.js 或 .cz-config.cjs"
-      );
+      // 如果找不到配置文件，使用默认配置
+      Logger.info("未找到配置文件，将使用默认配置");
+      return this.getDefaultConfig();
     }
 
     try {
@@ -80,8 +80,51 @@ export class GitService {
       this.config = require(absolutePath);
       return this.config as any;
     } catch (error) {
-      throw new Error(`加载配置文件失败: ${error}`);
+      Logger.warn(`加载配置文件失败: ${error}，将使用默认配置`);
+      return this.getDefaultConfig();
     }
+  }
+
+  /**
+   * 获取默认配置
+   */
+  private getDefaultConfig(): CzConfig {
+    return {
+      types: [
+        { value: "🎉 init", name: "🎉 init: 初始化" },
+        { value: "✨ feat", name: "✨ feat: 新功能" },
+        { value: "🐞 fix", name: "🐞 fix: 修复bug" },
+        { value: "💡 perf", name: "💡 perf: 改进优化相关,比如提升性能、体验" },
+        { value: "🚧 wip", name: "🚧 wip: 正在进行中的工作" },
+        { value: "🚨 test", name: "🚨 test: 测试，实验" },
+        { value: "🔧 chore", name: "🔧 chore: 构建/工程依赖/工具" },
+        {
+          value: "💄 style",
+          name: "💄 style: 代码的样式美化(标记、空白、格式化、缺少分号……)",
+        },
+        { value: "🔖 release", name: "🔖 release: 发布版本" },
+        { value: "🚚 move", name: "🚚 move: 移动或删除文件" },
+        { value: "⏪ revert", name: "⏪ revert: 回退" },
+        { value: "🔀 merge", name: "🔀 merge: 合并分支" },
+        { value: "📝 docs", name: "📝 docs: 文档变更" },
+      ],
+      scopes: ["项目", ""], // 项目模块名可写在这里 方便快捷选择
+      skipQuestions: ["body", "footer"],
+      messages: {
+        type: "选择一种你的提交类型( 必选 ❗):",
+        scope:
+          "请选择修改范围(支持自定义)\n 💬 业务项目中依据菜单或者功能模块划分(可选)：\n",
+        customScope: "请输入自定义范围:",
+        subject: "请简要描述提交( 必填 ❗)：\n",
+        body: '请输入详细描述使用," | "换行(可选)：\n',
+        breaking: "列出任何BREAKING CHANGES(可选)：\n",
+        footer: "列出关闭的issue (可选):\n",
+        confirmCommit: "确定提交此说明吗？",
+      },
+      allowCustomScopes: true,
+      allowBreakingChanges: ["feat", "fix"], // 当提交类型为feat、fix时才有破坏性修改选项
+      subjectLimit: 72,
+    };
   }
 
   /**
@@ -198,6 +241,26 @@ export class GitService {
     }
 
     return stats;
+  }
+
+  /**
+   * 获取暂存文件信息（总文件数和总行数）
+   */
+  async getStagedFilesInfo(): Promise<{
+    totalFiles: number;
+    totalLines: number;
+  }> {
+    const stagedFiles = await this.getStagedFiles();
+    let totalLines = 0;
+
+    for (const file of stagedFiles) {
+      totalLines += file.changedLines.additions + file.changedLines.deletions;
+    }
+
+    return {
+      totalFiles: stagedFiles.length,
+      totalLines,
+    };
   }
 
   /**
@@ -555,6 +618,94 @@ export class GitService {
         Logger.info("已取消提交");
         return;
       }
+      Logger.error("提交失败：" + error);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取用于 AI 生成提交信息的差异摘要
+   */
+  async getDiffSummaryForAI(): Promise<string> {
+    try {
+      // 获取暂存区文件
+      const stagedFiles = await this.getStagedFiles();
+
+      if (stagedFiles.length === 0) {
+        throw new Error("没有暂存的更改，请先使用 git add 添加要提交的文件");
+      }
+
+      // 计算变更统计
+      const stats = await this.calculateChangeStats(stagedFiles);
+
+      // 组装差异摘要文本
+      let summary = `变更概览：\n`;
+      summary += `- 新增文件: ${stats.addedFiles.length} 个\n`;
+      summary += `- 修改文件: ${stats.modifiedFiles.length} 个\n`;
+      summary += `- 删除文件: ${stats.deletedFiles.length} 个\n`;
+      summary += `- 重命名文件: ${stats.renamedFiles.length} 个\n`;
+      summary += `- 总变更行数: ${stats.totalLines} 行\n\n`;
+
+      // 添加文件类型信息
+      summary += `文件类型：\n`;
+      for (const [ext, count] of Object.entries(stats.fileTypes)) {
+        summary += `- ${ext}: ${count} 个文件\n`;
+      }
+      summary += `\n`;
+
+      // 添加最多 5 个文件的详细差异
+      summary += `文件变更详情（最多展示 5 个重要文件）：\n`;
+
+      // 按照变更行数排序并取前 5 个文件
+      const importantFiles = [...stagedFiles]
+        .sort((a, b) => {
+          const linesA = a.changedLines.additions + a.changedLines.deletions;
+          const linesB = b.changedLines.additions + b.changedLines.deletions;
+          return linesB - linesA;
+        })
+        .slice(0, 5);
+
+      for (const file of importantFiles) {
+        summary += `\n文件: ${file.path} (${file.status})\n`;
+        summary += `- 新增: +${file.changedLines.additions} 行\n`;
+        summary += `- 删除: -${file.changedLines.deletions} 行\n`;
+
+        // 添加文件差异的简短摘要
+        if (file.diff) {
+          // 限制差异内容长度
+          const maxLength = 500;
+          const diffContent =
+            file.diff.length > maxLength
+              ? file.diff.substring(0, maxLength) + "...(省略剩余内容)"
+              : file.diff;
+
+          summary += `差异内容:\n${diffContent}\n`;
+        }
+      }
+
+      return summary;
+    } catch (error: any) {
+      Logger.error("获取差异摘要失败：" + error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 使用指定的提交信息进行提交
+   */
+  async commitWithMessage(message: {
+    type: string;
+    scope?: string;
+    subject: string;
+    body?: string;
+    breaking?: string;
+    issues?: string;
+  }): Promise<void> {
+    try {
+      const commitMessage = this.formatCommitMessage(message);
+      await this.git.commit(commitMessage);
+      Logger.success("提交成功！");
+    } catch (error: any) {
       Logger.error("提交失败：" + error);
       throw error;
     }

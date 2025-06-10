@@ -46,14 +46,12 @@ export class ConfigService {
 
   /**
    * 检查和提示配置状态
+   * 返回是否有配置文件，但不阻止继续执行
    */
   public checkConfig(): boolean {
     if (!this.hasConfig()) {
-      Logger.error(
-        "未找到配置文件，请确保项目根目录下存在 .cz-config.js 或 .cz-config.cjs"
-      );
-      Logger.info("您可以参考 cz-customizable 的文档来创建配置文件");
-      return false;
+      Logger.warn("未找到配置文件，将使用默认配置");
+      return true; // 即使没有配置文件也返回 true，表示可以继续
     }
     return true;
   }

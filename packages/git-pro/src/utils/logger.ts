@@ -21,6 +21,6 @@ export class Logger {
 
   /** 信息日志输出 */
   static info(message: string): void {
-    console.info(chalk.blue(`ℹ️ ${chalk.bgBlue.white(" 信息 ")} ${message}`));
+    console.info(chalk.blue(`🔊 ${chalk.bgBlue.white(" 信息 ")} ${message}`));
   }
 }

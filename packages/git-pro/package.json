@@ -1,6 +1,6 @@
 {
   "name": "@cjh0/git-pro",
-  "version": "2.0.1",
+  "version": "3.2.0",
   "description": "Git workflow enhancement tool,前端团队git工具!!!",
   "main": "dist/index.js",
   "bin": {
@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc && javascript-obfuscator dist --output dist > nul ",
+    "watch": "tsc -w --preserveWatchOutput",
     "prepare": "yarn build",
     "postpublish": "npm publish --access public && npx npm-mirror-sync"
   },
@@ -20,6 +21,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "axios": "^1.6.0",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.3",
     "clipboardy": "^4.0.0",
