@@ -201,7 +201,7 @@ ${systemPrompt}
 代码更改摘要:
 ${diffSummary}
 
-提交类型必须从以下选项中选择:
+提交类型必须从以下选项中选择（请直接使用列表中的值，不要添加冒号）:
 ${config.types.map((t) => `- ${t.value}: ${t.name}`).join("\n")}
 
 ${config.scopes && config.scopes.length > 0
@@ -313,6 +313,11 @@ ${JSON.stringify(this.config.prompt.outputFormat.example, null, 2)}
       const jsonStr = jsonMatch ? jsonMatch[0] : response;
 
       const result = JSON.parse(jsonStr);
+
+      // 去除 type 中可能存在的冒号
+      if (result.type && result.type.includes(':')) {
+        result.type = result.type.replace(':', '').trim();
+      }
 
       // 验证提交类型是否有效
       const validTypes = config.types.map((t) => t.value);
