@@ -53,7 +53,7 @@ export class AIService {
   private config: AIConfig | null = null;
   private readonly configUrl: string = "http://143.20.9.234:8080/config/ai-config.json";
 
-  private constructor() {}
+  private constructor() { }
 
   /** 获取实例 */
   public static getInstance(): AIService {
@@ -80,7 +80,7 @@ export class AIService {
   /** 应用配置 */
   private applyConfig(): void {
     if (!this.config) return;
-    
+
     if (!this.apiKey) {
       this.apiKey = this.config.api.defaultApiKey;
     }
@@ -98,7 +98,7 @@ export class AIService {
   private async loadConfigFromEnv(): Promise<void> {
     // 先加载远程配置
     await this.loadRemoteConfig();
-    
+
     // 环境变量配置优先级最高，可覆盖远程配置
     const apiKey = process.env.SILICONFLOW_API_KEY;
     const model = process.env.AI_MODEL;
@@ -173,6 +173,19 @@ export class AIService {
   }
 
   /**
+   * 提供默认的 commitizen 配置
+   */
+  private getDefaultCzConfig(): CzConfigForAI {
+    if (!this.config) {
+      throw new Error("❌ 配置未加载，无法获取 commitizen 配置");
+    }
+    return {
+      types: this.config.defaultTypes,
+      scopes: this.config.defaultScopes,
+    };
+  }
+
+  /**
    * 构建提示词
    */
   private buildPrompt(diffSummary: string, config: CzConfigForAI): string {
@@ -180,7 +193,7 @@ export class AIService {
       throw new Error("❌ 配置未加载，无法构建提示词");
     }
     const systemPrompt = this.config.prompt.systemPrompt;
-    
+
     // 基本提示词
     let prompt = `
 ${systemPrompt}
@@ -191,12 +204,11 @@ ${diffSummary}
 提交类型必须从以下选项中选择:
 ${config.types.map((t) => `- ${t.value}: ${t.name}`).join("\n")}
 
-${
-  config.scopes && config.scopes.length > 0
-    ? `可选的作用域范围:
+${config.scopes && config.scopes.length > 0
+        ? `可选的作用域范围:
 ${config.scopes.map((s) => `- ${s}`).join("\n")}`
-    : ""
-}
+        : ""
+      }
 
 `;
 
