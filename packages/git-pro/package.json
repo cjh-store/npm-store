@@ -1,6 +1,6 @@
 {
   "name": "@cjh0/git-pro",
-  "version": "7.0.1",
+  "version": "8.0.1",
   "description": "Git workflow enhancement tool,前端团队git工具!!!",
   "main": "dist/index.js",
   "bin": {
@@ -11,7 +11,7 @@
     "build": "tsc && javascript-obfuscator dist --output dist > nul ",
     "watch": "tsc -w --preserveWatchOutput",
     "prepare": "yarn build",
-    "postpublish": "npm publish --access public && npx npm-mirror-sync"
+    "postpublish": "npx npm-mirror-sync"
   },
   "keywords": [
     "git",
