@@ -92,3 +92,8 @@ gitmojis.json
 tmp
 
 dist
+
+# Ignore all dotfiles except .vscode
+.*
+!.vscode/
+!.gitignore

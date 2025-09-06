@@ -653,24 +653,16 @@ export class GitService {
       }
       summary += `\n`;
 
-      // 添加最多 5 个文件的详细差异
-      summary += `文件变更详情（最多展示 5 个重要文件）：\n`;
+      // 添加所有文件的详细差异
+      summary += `文件变更详情（共 ${stagedFiles.length} 个文件）：\n`;
 
-      // 按照变更行数排序并取前 5 个文件
-      const importantFiles = [...stagedFiles]
-        .sort((a, b) => {
-          const linesA = a.changedLines.additions + a.changedLines.deletions;
-          const linesB = b.changedLines.additions + b.changedLines.deletions;
-          return linesB - linesA;
-        })
-        .slice(0, 5);
-
-      for (const file of importantFiles) {
+      // 发送所有文件的差异，不做数量限制
+      for (const file of stagedFiles) {
         summary += `\n文件: ${file.path} (${file.status})\n`;
         summary += `- 新增: +${file.changedLines.additions} 行\n`;
         summary += `- 删除: -${file.changedLines.deletions} 行\n`;
 
-        // 添加文件差异的简短摘要
+        // 添加文件差异
         if (file.diff) {
           // 限制差异内容长度
           const maxLength = 500;

@@ -61,7 +61,6 @@ export async function aiCommitCommand(): Promise<void> {
       return;
     }
 
-    Logger.info("正在调用 AI 生成提交信息...");
 
     try {
       // 通过 AI 生成提交信息

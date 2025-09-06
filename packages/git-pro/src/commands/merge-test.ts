@@ -22,12 +22,18 @@ export async function mergeTestCommand(): Promise<void> {
 
     Logger.info(`当前分支: ${currentBranch}`);
 
-    // 检查test分支是否存在
+    // 检查本地test分支是否存在，如果不存在则从远程创建
+    let testBranchExists = false;
     try {
-      execSync("git rev-parse --verify test");
+      execSync("git rev-parse --verify test", { stdio: 'ignore' });
+      testBranchExists = true;
     } catch {
-      Logger.error("test分支不存在");
-      return;
+      // 本地没有test分支，从远程创建（远程test分支肯定存在）
+      Logger.info("本地test分支不存在，从远程创建...");
+      execSync("git fetch origin test");
+      execSync("git checkout -b test origin/test");
+      execSync(`git checkout ${currentBranch}`);
+      Logger.success("成功创建本地test分支");
     }
 
     // 合并前确认

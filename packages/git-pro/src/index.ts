@@ -3,7 +3,6 @@ import { program } from "commander";
 import { commitCommand } from "./commands/commit";
 import { tagCommand } from "./commands/tag";
 import { mergeTestCommand } from "./commands/merge-test";
-import { mergeMasterCommand } from "./commands/merge-master";
 import { aiCommitCommand } from "./commands/ai-commit";
 
 program
@@ -34,10 +33,5 @@ program
   .command("merge-test")
   .description("将当前分支合并到test分支并推送")
   .action(mergeTestCommand);
-
-program
-  .command("merge-master")
-  .description("将develop分支合并到master分支并创建tag")
-  .action(mergeMasterCommand);
 
 program.parse();

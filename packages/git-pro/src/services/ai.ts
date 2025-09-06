@@ -1,18 +1,6 @@
 import axios from "axios";
 import { Logger } from "../utils/logger";
 import { gitService } from "./git";
-import { configService } from "./config";
-import fs from "fs";
-import path from "path";
-
-interface AIOptions {
-  /** API 密钥 */
-  apiKey: string;
-  /** 模型名称 */
-  model: string;
-  /** 自定义提示词 */
-  customPrompt?: string;
-}
 
 interface CzConfigForAI {
   types: Array<{
@@ -23,15 +11,47 @@ interface CzConfigForAI {
   rawContent?: string;
 }
 
+interface AIConfig {
+  api: {
+    baseUrl: string;
+    defaultApiKey: string;
+    timeout?: number;
+  };
+  model: {
+    default: string;
+  };
+  prompt: {
+    systemPrompt: string;
+    customPrompt: string;
+    outputFormat: {
+      instruction: string;
+      example: Record<string, string>;
+    };
+  };
+  defaultTypes: Array<{ value: string; name: string }>;
+  defaultScopes: string[];
+  fallback: {
+    type: string;
+    subject: string;
+  };
+  messages: {
+    modelInfo: string;
+    success: string;
+    parseError: string;
+    typeWarning: string;
+  };
+}
+
 /**
- * DeepSeek API 服务类
+ * SiliconFlow API 服务类 (使用 GLM-4.5 模型)
  */
 export class AIService {
   private static instance: AIService;
-  // 默认内置 API 密钥
-  private apiKey: string = "c2stYzc3ZGE3MWJmYzc1NDYxNmJkN2M1NGJiMGY1ZTU0Y2E";
-  private model: string = "deepseek-chat";
+  private apiKey: string = "";
+  private model: string = "";
   private customPrompt: string = "";
+  private config: AIConfig | null = null;
+  private readonly configUrl: string = "http://143.20.9.234:8080/config/ai-config.json";
 
   private constructor() {}
 
@@ -43,32 +63,50 @@ export class AIService {
     return AIService.instance;
   }
 
-  /** 设置配置 */
-  public setOptions(options: AIOptions): void {
-    this.apiKey = options.apiKey || this.apiKey;
-    this.model = options.model || "deepseek-chat";
-    this.customPrompt = options.customPrompt || "";
+  /** 从远程加载配置 */
+  private async loadRemoteConfig(): Promise<void> {
+    try {
+      const response = await axios.get(this.configUrl, {
+        timeout: 10000
+      });
+      this.config = response.data;
+      this.applyConfig();
+      Logger.info("☁️ 已加载远程 AI 配置");
+    } catch (error: any) {
+      throw new Error(`❌ 无法加载远程配置: ${error.message}\n请确保配置服务器 ${this.configUrl} 可访问`);
+    }
   }
 
-  /** 检查配置是否有效 */
-  public isConfigured(): boolean {
-    return !!this.apiKey;
+  /** 应用配置 */
+  private applyConfig(): void {
+    if (!this.config) return;
+    
+    if (!this.apiKey) {
+      this.apiKey = this.config.api.defaultApiKey;
+    }
+    if (!this.model) {
+      this.model = this.config.model.default;
+    }
+    if (!this.customPrompt) {
+      this.customPrompt = this.config.prompt.customPrompt;
+    }
   }
 
   /**
    * 从环境变量读取配置
-   * 可以覆盖默认API密钥
    */
-  public loadConfigFromEnv(): boolean {
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    const model = process.env.DEEPSEEK_MODEL || "deepseek-chat";
-    const customPrompt = process.env.DEEPSEEK_PROMPT || "";
+  private async loadConfigFromEnv(): Promise<void> {
+    // 先加载远程配置
+    await this.loadRemoteConfig();
+    
+    // 环境变量配置优先级最高，可覆盖远程配置
+    const apiKey = process.env.SILICONFLOW_API_KEY;
+    const model = process.env.AI_MODEL;
+    const customPrompt = process.env.AI_PROMPT;
 
-    if (apiKey) {
-      this.setOptions({ apiKey, model, customPrompt });
-      return true;
-    }
-    return false;
+    if (apiKey) this.apiKey = apiKey;
+    if (model) this.model = model;
+    if (customPrompt) this.customPrompt = customPrompt;
   }
 
   /**
@@ -81,10 +119,13 @@ export class AIService {
     body?: string;
   }> {
     try {
-      // 尝试从环境变量加载配置（如果有的话）
-      this.loadConfigFromEnv();
+      // 加载远程配置和环境变量配置
+      await this.loadConfigFromEnv();
 
-      // 已经有内置的默认 API 密钥，不再需要检查配置了
+      // 检查配置是否成功加载
+      if (!this.config || !this.apiKey) {
+        throw new Error("❌ AI 配置未成功加载，请检查配置服务器是否可访问");
+      }
 
       // 获取暂存区差异
       const diffSummary = await gitService.getDiffSummaryForAI();
@@ -95,8 +136,19 @@ export class AIService {
       // 构建提示词
       const prompt = this.buildPrompt(diffSummary, config);
 
+      // 显示正在使用的模型
+      if (this.config) {
+        const modelMsg = this.config.messages.modelInfo.replace("{model}", this.model);
+        Logger.info(modelMsg);
+      }
+
       // 调用 API 生成提交信息
       const response = await this.callDeepSeekAPI(prompt);
+
+      if (this.config) {
+        const successMsg = this.config.messages.success.replace("{model}", this.model);
+        Logger.info(successMsg);
+      }
 
       // 解析返回的提交信息
       return this.parseResponse(response, config);
@@ -110,56 +162,13 @@ export class AIService {
    * 获取 commitizen 配置供 AI 使用
    */
   private async getCzConfigForAI(): Promise<CzConfigForAI> {
-    try {
-      const configPath = configService.getConfigPath();
-
-      // 如果找不到配置文件，使用默认配置
-      if (!configPath) {
-        return this.getDefaultCzConfig();
-      }
-
-      const absolutePath = path.resolve(configPath);
-      delete require.cache[absolutePath];
-      const config = require(absolutePath);
-
-      // 读取原始配置文件内容
-      const rawConfigContent = fs.readFileSync(absolutePath, "utf-8");
-
-      return {
-        types: config.types || [],
-        scopes: config.scopes || [],
-        rawContent: rawConfigContent, // 保存原始配置内容
-      };
-    } catch (error: any) {
-      Logger.warn(`加载 commitizen 配置失败: ${error.message}`);
-      return this.getDefaultCzConfig();
+    // 直接使用远程配置中的默认类型和作用域
+    if (!this.config) {
+      throw new Error("❌ 配置未加载，无法获取 commitizen 配置");
     }
-  }
-
-  /**
-   * 提供默认的 commitizen 配置
-   */
-  private getDefaultCzConfig(): CzConfigForAI {
     return {
-      types: [
-        { value: "🎉 init", name: "🎉 init: 初始化" },
-        { value: "✨ feat", name: "✨ feat: 新功能" },
-        { value: "🐞 fix", name: "🐞 fix: 修复bug" },
-        { value: "💡 perf", name: "💡 perf: 改进优化相关,比如提升性能、体验" },
-        { value: "🚧 wip", name: "🚧 wip: 正在进行中的工作" },
-        { value: "🚨 test", name: "🚨 test: 测试，实验" },
-        { value: "🔧 chore", name: "🔧 chore: 构建/工程依赖/工具" },
-        {
-          value: "💄 style",
-          name: "💄 style: 代码的样式美化(标记、空白、格式化、缺少分号……)",
-        },
-        { value: "🔖 release", name: "🔖 release: 发布版本" },
-        { value: "🚚 move", name: "🚚 move: 移动或删除文件" },
-        { value: "⏪ revert", name: "⏪ revert: 回退" },
-        { value: "🔀 merge", name: "🔀 merge: 合并分支" },
-        { value: "📝 docs", name: "📝 docs: 文档变更" },
-      ],
-      scopes: ["项目", ""], // 项目模块名可写在这里 方便快捷选择
+      types: this.config.defaultTypes,
+      scopes: this.config.defaultScopes,
     };
   }
 
@@ -167,9 +176,14 @@ export class AIService {
    * 构建提示词
    */
   private buildPrompt(diffSummary: string, config: CzConfigForAI): string {
+    if (!this.config) {
+      throw new Error("❌ 配置未加载，无法构建提示词");
+    }
+    const systemPrompt = this.config.prompt.systemPrompt;
+    
     // 基本提示词
     let prompt = `
-作为一个 Git 提交消息生成器，请根据以下代码更改生成一条符合 Angular Commit Message 规范的提交消息,并结合获取的配置文件和git 提交信息的 emoji 指南,需要给type设置emoji表情。
+${systemPrompt}
 
 代码更改摘要:
 ${diffSummary}
@@ -205,13 +219,8 @@ ${config.rawContent}
 
 请确保提交类型(type)包含emoji表情，以使提交信息在Git历史中更加直观。
 
-请只返回格式为 JSON 的结果，包含以下字段:
-{
-  "type": "带emoji的提交类型",
-  "scope": "作用域(可选)",
-  "subject": "简短描述",
-  "body": "详细描述(可选)"
-}
+${this.config.prompt.outputFormat.instruction}
+${JSON.stringify(this.config.prompt.outputFormat.example, null, 2)}
 `;
 
     // 添加自定义提示词
@@ -223,13 +232,16 @@ ${config.rawContent}
   }
 
   /**
-   * 调用 DeepSeek API
+   * 调用 SiliconFlow API (GLM-4.5模型)
    */
   private async callDeepSeekAPI(prompt: string): Promise<string> {
+    if (!this.config) {
+      throw new Error("❌ 配置未加载，无法调用 API");
+    }
     try {
-      const url = "https://api.deepseek.com/v1/chat/completions";
-      // 解码 API 密钥
-      const decodedApiKey = Buffer.from(this.apiKey, "base64").toString();
+      const url = this.config.api.baseUrl;
+      // 直接使用API密钥，不需要解码
+      const apiKey = this.apiKey;
 
       const response = await axios.post(
         url,
@@ -237,13 +249,16 @@ ${config.rawContent}
           model: this.model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3,
-          max_tokens: 1000,
+          max_tokens: 2000,  // 增加到2000以支持更多代码提交
+          enable_thinking: false,
+          top_p: 0.7
         },
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${decodedApiKey}`,
+            Authorization: `Bearer ${apiKey}`,
           },
+          timeout: this.config.api.timeout
         }
       );
 
@@ -290,24 +305,28 @@ ${config.rawContent}
       // 验证提交类型是否有效
       const validTypes = config.types.map((t) => t.value);
       if (!validTypes.includes(result.type)) {
-        Logger.warn(
-          `AI 生成的提交类型 "${result.type}" 不在允许的类型列表中，将使用默认类型 "feat"`
-        );
-        result.type = "feat";
+        if (this.config) {
+          const warningMsg = this.config.messages.typeWarning.replace("{type}", result.type);
+          Logger.warn(warningMsg);
+          result.type = this.config.fallback.type;
+        }
       }
 
       return {
         type: result.type,
         scope: result.scope || undefined,
-        subject: result.subject || "更新代码",
+        subject: result.subject || this.config?.fallback.subject,
         body: result.body || undefined,
       };
     } catch (error) {
-      Logger.error("解析 AI 响应失败，将使用默认提交信息");
-      return {
-        type: "feat",
-        subject: "更新代码",
-      };
+      if (this.config) {
+        Logger.error(this.config.messages.parseError);
+        return {
+          type: this.config.fallback.type,
+          subject: this.config.fallback.subject,
+        };
+      }
+      throw error;
     }
   }
 }
