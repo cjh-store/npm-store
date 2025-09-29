@@ -25,6 +25,18 @@ on:
           - '@cjh0/fetch-event-source'
           - '@cjh0/git-pro'
 
+      version_type:
+        description: '版本类型 (仅对all有效，单包发布请使用from-package)'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - 'auto'         # 基于conventional commits自动检测
+          - 'patch'        # 补丁版本 (1.0.0 → 1.0.1)
+          - 'minor'        # 次版本 (1.0.0 → 1.1.0)
+          - 'major'        # 主版本 (1.0.0 → 2.0.0)
+          - 'from-package' # 使用package.json中的当前版本
+
       force:
         description: '强制发布 (跳过版本检查)'
         required: false
@@ -174,8 +186,9 @@ jobs:
             # 手动触发
             echo "trigger=manual" >> $GITHUB_OUTPUT
             echo "packages=${{ github.event.inputs.packages }}" >> $GITHUB_OUTPUT
+            echo "version_type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
             echo "force=${{ github.event.inputs.force }}" >> $GITHUB_OUTPUT
-            echo "🖱️ 手动触发: ${{ github.event.inputs.packages }}"
+            echo "🖱️ 手动触发: ${{ github.event.inputs.packages }} (版本类型: ${{ github.event.inputs.version_type }})"
 
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             # 自动触发：推送到主分支
@@ -242,26 +255,56 @@ jobs:
           elif [[ "$TRIGGER" == "manual" ]]; then
             # 手动触发：根据选择发布
             PACKAGES="${{ steps.parse.outputs.packages }}"
+            VERSION_TYPE="${{ steps.parse.outputs.version_type }}"
 
             if [[ "$PACKAGES" == "all" ]]; then
-              echo "🚀 发布所有已变更的包"
+              echo "🚀 发布所有已变更的包 (版本类型: $VERSION_TYPE)"
 
-              # 捕获lerna输出并解析
-              if npx lerna publish --conventional-commits --no-verify-access --yes > /tmp/lerna_output.txt 2>&1; then
-                echo "✅ Lerna发布成功"
-                # 提取发布成功的包信息
-                grep "Successfully published:" /tmp/lerna_output.txt || echo "未找到发布信息"
-                grep -E "lerna success published.*@.*" /tmp/lerna_output.txt | sed 's/lerna success published /✅ /' >> /tmp/publish_results.txt
+              # 根据版本类型选择发布命令
+              if [[ "$VERSION_TYPE" == "auto" ]]; then
+                # 自动检测版本类型
+                if npx lerna publish --conventional-commits --no-verify-access --yes > /tmp/lerna_output.txt 2>&1; then
+                  echo "✅ Lerna自动发布成功"
+                  cat /tmp/lerna_output.txt
+                  grep -E "lerna success published.*@.*" /tmp/lerna_output.txt | sed 's/lerna success published /✅ /' >> /tmp/publish_results.txt
+                else
+                  echo "❌ Lerna自动发布失败"
+                  cat /tmp/lerna_output.txt
+                  echo "❌ 自动发布失败" >> /tmp/publish_results.txt
+                  exit 1
+                fi
+
+              elif [[ "$VERSION_TYPE" == "from-package" ]]; then
+                # 使用当前package.json版本发布
+                if npx lerna publish from-package --no-verify-access --yes > /tmp/lerna_output.txt 2>&1; then
+                  echo "✅ Lerna从package.json发布成功"
+                  cat /tmp/lerna_output.txt
+                  grep -E "lerna success published.*@.*" /tmp/lerna_output.txt | sed 's/lerna success published /✅ /' >> /tmp/publish_results.txt
+                else
+                  echo "❌ Lerna从package.json发布失败"
+                  cat /tmp/lerna_output.txt
+                  echo "❌ 从package.json发布失败" >> /tmp/publish_results.txt
+                  exit 1
+                fi
+
               else
-                echo "❌ Lerna发布失败"
-                cat /tmp/lerna_output.txt
-                echo "❌ 发布失败" >> /tmp/publish_results.txt
-                exit 1
+                # 手动指定版本类型 (major/minor/patch)
+                echo "📋 手动指定版本类型: $VERSION_TYPE"
+                if npx lerna publish "$VERSION_TYPE" --no-verify-access --yes > /tmp/lerna_output.txt 2>&1; then
+                  echo "✅ Lerna手动版本发布成功"
+                  cat /tmp/lerna_output.txt
+                  grep -E "lerna success published.*@.*" /tmp/lerna_output.txt | sed 's/lerna success published /✅ /' >> /tmp/publish_results.txt
+                else
+                  echo "❌ Lerna手动版本发布失败"
+                  cat /tmp/lerna_output.txt
+                  echo "❌ 手动版本发布失败" >> /tmp/publish_results.txt
+                  exit 1
+                fi
               fi
             else
               echo "🎯 发布指定包: $PACKAGES"
 
-              # 处理多个包的情况
+              # 处理多个包的情况 - 单包发布只能使用当前版本
               IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
               for pkg in "${PKG_ARRAY[@]}"; do
                 pkg=$(echo "$pkg" | xargs)  # 去除空格
@@ -350,6 +393,7 @@ jobs:
           elif [[ "$TRIGGER" == "manual" ]]; then
             echo "- **触发方式**: 🖱️ 手动触发" >> $GITHUB_STEP_SUMMARY
             echo "- **发布范围**: ${{ steps.parse.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **版本类型**: ${{ steps.parse.outputs.version_type }}" >> $GITHUB_STEP_SUMMARY
           elif [[ "$TRIGGER" == "auto" ]]; then
             echo "- **触发方式**: 🤖 自动触发" >> $GITHUB_STEP_SUMMARY
             echo "- **发布范围**: 检测到变更的包" >> $GITHUB_STEP_SUMMARY
