@@ -1,1 +1,44 @@
+# TypeScript 源码
 src
+
+# 构建过程产生的垃圾文件
+nul
+
+# 开发配置文件
+tsconfig.json
+*.ts
+!*.d.ts
+
+# 测试文件
+tests/
+test/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# 配置文件
+.eslintrc*
+.prettierrc*
+jest.config.*
+webpack.config.*
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+.cache/
+
+# 系统文件
+.DS_Store
+Thumbs.db
