@@ -1,6 +1,9 @@
 import axios from "axios";
 import { Logger } from "../utils/logger";
 import { gitService } from "./git";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 interface CzConfigForAI {
   types: Array<{
@@ -9,6 +12,13 @@ interface CzConfigForAI {
   }>;
   scopes?: string[];
   rawContent?: string;
+}
+
+interface CachedConfig {
+  config: AIConfig;
+  timestamp: number;
+  version?: string;
+  url: string;
 }
 
 interface AIConfig {
@@ -64,8 +74,14 @@ export class AIService {
   private customPrompt: string = "";
   private config: AIConfig | null = null;
   private readonly configUrl: string = "https://zfile.nmyh.cc/directlink/1/git-pro/ai-config.json";
+  private readonly cacheDir: string;
+  private readonly cacheFilePath: string;
 
-  private constructor() { }
+  private constructor() {
+    // 初始化缓存目录路径
+    this.cacheDir = path.join(os.homedir(), '.git-pro');
+    this.cacheFilePath = path.join(this.cacheDir, 'ai-config-cache.json');
+  }
 
   /** 获取实例 */
   public static getInstance(): AIService {
@@ -75,6 +91,57 @@ export class AIService {
     return AIService.instance;
   }
 
+  /** 确保缓存目录存在 */
+  private ensureCacheDir(): void {
+    if (!fs.existsSync(this.cacheDir)) {
+      fs.mkdirSync(this.cacheDir, { recursive: true });
+    }
+  }
+
+  /** 保存配置到缓存 */
+  private saveConfigToCache(config: AIConfig): void {
+    try {
+      this.ensureCacheDir();
+      const cachedConfig: CachedConfig = {
+        config,
+        timestamp: Date.now(),
+        version: "1.0.0", // 可以根据需要从config中提取版本信息
+        url: this.configUrl
+      };
+      fs.writeFileSync(this.cacheFilePath, JSON.stringify(cachedConfig, null, 2));
+      Logger.info("💾 已保存配置到本地缓存");
+    } catch (error: any) {
+      Logger.warn(`⚠️ 保存配置缓存失败: ${error.message}`);
+    }
+  }
+
+  /** 从缓存读取配置 */
+  private loadConfigFromCache(): AIConfig | null {
+    try {
+      if (!fs.existsSync(this.cacheFilePath)) {
+        return null;
+      }
+
+      const cacheContent = fs.readFileSync(this.cacheFilePath, 'utf-8');
+      const cachedConfig: CachedConfig = JSON.parse(cacheContent);
+      
+      // 检查缓存是否过期（默认7天）
+      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7天
+      const isExpired = Date.now() - cachedConfig.timestamp > maxAge;
+      
+      if (isExpired) {
+        Logger.warn("⏰ 缓存配置已过期，将尝试重新获取远程配置");
+        return null;
+      }
+
+      Logger.info("📦 已从本地缓存加载配置");
+      return cachedConfig.config;
+    } catch (error: any) {
+      Logger.warn(`⚠️ 读取配置缓存失败: ${error.message}`);
+      return null;
+    }
+  }
+
   /** 从远程加载配置 */
   private async loadRemoteConfig(): Promise<void> {
     try {
@@ -82,6 +149,10 @@ export class AIService {
         timeout: 10000
       });
       this.config = response.data;
+      
+      // 保存到缓存
+      this.saveConfigToCache(this.config);
+      
       this.applyConfig();
       Logger.info("☁️ 已加载远程 AI 配置");
     } catch (error: any) {
@@ -105,13 +176,30 @@ export class AIService {
   }
 
   /**
-   * 从环境变量读取配置
+   * 从环境变量读取配置（支持缓存回退）
    */
   private async loadConfigFromEnv(): Promise<void> {
-    // 先加载远程配置
-    await this.loadRemoteConfig();
+    try {
+      // 优先加载远程配置
+      await this.loadRemoteConfig();
+    } catch (error: any) {
+      Logger.warn("☁️ 远程配置加载失败，尝试使用本地缓存");
+      
+      // 远程配置失败时，尝试从缓存加载
+      const cachedConfig = this.loadConfigFromCache();
+      
+      if (cachedConfig) {
+        this.config = cachedConfig;
+        this.applyConfig();
+        Logger.info("🔄 已使用本地缓存配置作为回退方案");
+      } else {
+        // 如果缓存也没有，抛出原始错误
+        Logger.error("❌ 远程配置和本地缓存都不可用");
+        throw error;
+      }
+    }
 
-    // 环境变量配置优先级最高，可覆盖远程配置
+    // 环境变量配置优先级最高，可覆盖远程/缓存配置
     const apiKey = process.env.SILICONFLOW_API_KEY;
     const model = process.env.AI_MODEL;
     const customPrompt = process.env.AI_PROMPT;
