@@ -62,10 +62,29 @@ jobs:
       - name: ✅ Verify NPM Authentication
         run: |
           echo "🔧 验证 NPM 认证..."
-          npm whoami
+
+          # 检查 NPM_TOKEN 是否存在
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "❌ NPM_TOKEN secret 未配置！"
+            echo "请按照以下步骤配置："
+            echo "1. 访问 https://www.npmjs.com/settings/tokens"
+            echo "2. 生成 Automation 类型的 token"
+            echo "3. 在 GitHub Settings > Secrets 中添加 NPM_TOKEN"
+            exit 1
+          fi
+
+          # 验证 NPM 登录
+          npm whoami || {
+            echo "❌ NPM 认证失败！请检查 token 是否有效"
+            echo "Token 前缀: ${NPM_TOKEN:0:8}..."
+            exit 1
+          }
+
           echo "✅ NPM 用户: $(npm whoami)"
+          echo "✅ NPM 认证验证成功"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # 4. 安装依赖
       - name: 📦 Install Dependencies
