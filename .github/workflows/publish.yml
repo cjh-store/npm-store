@@ -1,0 +1,241 @@
+name: 📦 Publish Packages
+
+on:
+  # 推送到主分支：自动发布有变更的包
+  push:
+    branches:
+      - main
+      - master
+
+  # 手动触发：选择性发布
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: '选择要发布的包 (多选用逗号分隔，all表示全部)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'cc-cli-run'
+          - 'cc-git-tag'
+          - 'cc-vite-progress'
+          - '@cjh0/fetch-event-source'
+          - '@cjh0/git-pro'
+
+      force:
+        description: '强制发布 (跳过版本检查)'
+        required: false
+        default: false
+        type: boolean
+
+  # 标签触发：格式 package-name@version（兼容手动标签发布）
+  push:
+    tags:
+      - '*@*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: "github.event_name == 'workflow_dispatch' || github.event_name == 'push' && (contains(github.ref, 'tags') || !contains(github.event.head_commit.message, '[skip ci]'))"
+
+    permissions:
+      contents: write      # 创建releases和标签
+      issues: write       # semantic-release需要
+      pull-requests: write # semantic-release需要
+      id-token: write     # npm provenance
+
+    steps:
+      # 1. 检出代码
+      - name: 🔄 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整历史，lerna需要
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. 设置Node.js环境
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      # 3. 验证NPM认证（借鉴cc项目）
+      - name: ✅ Verify NPM Authentication
+        run: |
+          echo "🔧 验证 NPM 认证..."
+          npm whoami
+          echo "✅ NPM 用户: $(npm whoami)"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # 4. 安装依赖
+      - name: 📦 Install Dependencies
+        run: yarn install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # 5. 质量检查 - 构建所有包
+      - name: 🔨 Build Packages
+        run: |
+          echo "🔨 开始构建需要构建的包..."
+
+          # 检查并构建cc-vite-progress
+          if [ -f "packages/cc-vite-progress/package.json" ]; then
+            echo "📦 构建 cc-vite-progress..."
+            cd packages/cc-vite-progress && yarn build && cd ../..
+          fi
+
+          # 检查并构建fetch-event-source
+          if [ -f "packages/fetch-event-source/package.json" ]; then
+            echo "📦 构建 fetch-event-source..."
+            cd packages/fetch-event-source && npm run build && cd ../..
+          fi
+
+          # 检查并构建git-pro
+          if [ -f "packages/git-pro/package.json" ]; then
+            echo "📦 构建 git-pro..."
+            cd packages/git-pro && yarn build && cd ../..
+          fi
+
+          echo "✅ 构建完成"
+
+      # 6. Git配置 (lerna需要)
+      - name: ⚙️ Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      # 7. 解析触发方式和包
+      - name: 🎯 Parse Trigger & Packages
+        id: parse
+        run: |
+          echo "🔍 分析触发方式..."
+
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+            # 标签触发：解析包名
+            TAG_NAME="${{ github.ref_name }}"
+            if [[ $TAG_NAME =~ ^(.+)@(.+)$ ]]; then
+              PACKAGE_NAME="${BASH_REMATCH[1]}"
+              PACKAGE_VERSION="${BASH_REMATCH[2]}"
+              echo "trigger=tag" >> $GITHUB_OUTPUT
+              echo "package=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+              echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+              echo "🏷️ 标签触发: $PACKAGE_NAME@$PACKAGE_VERSION"
+            else
+              echo "❌ 标签格式错误，应为 package@version"
+              exit 1
+            fi
+
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # 手动触发
+            echo "trigger=manual" >> $GITHUB_OUTPUT
+            echo "packages=${{ github.event.inputs.packages }}" >> $GITHUB_OUTPUT
+            echo "force=${{ github.event.inputs.force }}" >> $GITHUB_OUTPUT
+            echo "🖱️ 手动触发: ${{ github.event.inputs.packages }}"
+
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            # 自动触发：推送到主分支
+            echo "trigger=auto" >> $GITHUB_OUTPUT
+            echo "🤖 自动触发: 检测变更并发布"
+
+          else
+            echo "❌ 未知触发方式"
+            exit 1
+          fi
+
+      # 8. 智能发布包
+      - name: 🚀 Publish Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 确保npm已登录
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+
+          # 切换到npm源
+          npm config set registry https://registry.npmjs.org/
+
+          TRIGGER="${{ steps.parse.outputs.trigger }}"
+
+          if [[ "$TRIGGER" == "tag" ]]; then
+            # 标签触发：发布特定包
+            PACKAGE_NAME="${{ steps.parse.outputs.package }}"
+            echo "🎯 发布单个包: $PACKAGE_NAME"
+            npx lerna publish from-package --no-verify-access --yes --scope="$PACKAGE_NAME"
+
+          elif [[ "$TRIGGER" == "manual" ]]; then
+            # 手动触发：根据选择发布
+            PACKAGES="${{ steps.parse.outputs.packages }}"
+
+            if [[ "$PACKAGES" == "all" ]]; then
+              echo "🚀 发布所有已变更的包"
+              npx lerna publish --conventional-commits --no-verify-access --yes
+            else
+              echo "🎯 发布指定包: $PACKAGES"
+              # 处理多个包的情况
+              IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
+              for pkg in "${PKG_ARRAY[@]}"; do
+                pkg=$(echo "$pkg" | xargs)  # 去除空格
+                echo "📦 发布包: $pkg"
+                npx lerna publish from-package --no-verify-access --yes --scope="$pkg"
+              done
+            fi
+
+          elif [[ "$TRIGGER" == "auto" ]]; then
+            # 自动触发：基于commit信息发布变更的包
+            echo "🤖 自动检测并发布已变更的包"
+            npx lerna publish --conventional-commits --no-verify-access --yes
+
+          else
+            echo "❌ 未知触发类型: $TRIGGER"
+            exit 1
+          fi
+
+      # 9. 发布结果通知
+      - name: 📊 Publish Summary
+        if: always()
+        run: |
+          echo "## 📦 发布总结" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          TRIGGER="${{ steps.parse.outputs.trigger }}"
+
+          echo "### 🎯 触发信息" >> $GITHUB_STEP_SUMMARY
+          if [[ "$TRIGGER" == "tag" ]]; then
+            echo "- **触发方式**: 🏷️ 标签触发" >> $GITHUB_STEP_SUMMARY
+            echo "- **发布包**: ${{ steps.parse.outputs.package }}@${{ steps.parse.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$TRIGGER" == "manual" ]]; then
+            echo "- **触发方式**: 🖱️ 手动触发" >> $GITHUB_STEP_SUMMARY
+            echo "- **发布包**: ${{ steps.parse.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$TRIGGER" == "auto" ]]; then
+            echo "- **触发方式**: 🤖 自动触发" >> $GITHUB_STEP_SUMMARY
+            echo "- **发布范围**: 检测到变更的包" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "- **执行状态**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **执行时间**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node版本**: $(node --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- **NPM用户**: $(npm whoami 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### 🔗 快速链接" >> $GITHUB_STEP_SUMMARY
+          echo "- [📦 NPM Registry](https://www.npmjs.com/search?q=%40cjh0)" >> $GITHUB_STEP_SUMMARY
+          echo "- [📝 Lerna文档](https://lerna.js.org/)" >> $GITHUB_STEP_SUMMARY
+          echo "- [🏷️ 项目Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
+
+      # 10. 通知失败
+      - name: 🚨 Notify on Failure
+        if: failure()
+        run: |
+          echo "## ❌ 发布失败" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 常见问题排查" >> $GITHUB_STEP_SUMMARY
+          echo "1. **NPM Token**: 检查 \`NPM_TOKEN\` secret 是否正确配置" >> $GITHUB_STEP_SUMMARY
+          echo "2. **权限问题**: 确认账号对包有发布权限" >> $GITHUB_STEP_SUMMARY
+          echo "3. **版本冲突**: 检查包版本是否已存在" >> $GITHUB_STEP_SUMMARY
+          echo "4. **构建失败**: 查看构建步骤的错误信息" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 请查看上方的详细日志进行问题排查。"

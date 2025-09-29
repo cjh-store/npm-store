@@ -97,3 +97,7 @@ dist
 .*
 !.vscode/
 !.gitignore
+!.github
+
+# Qoder IDE 配置文件
+.qoder/

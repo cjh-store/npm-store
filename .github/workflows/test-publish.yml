@@ -1,0 +1,109 @@
+name: 🧪 Test Publish Workflow
+
+on:
+  # 只在手动触发时运行测试
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: '测试类型'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - 'dry-run'
+          - 'build-only'
+          - 'auth-check'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔄 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: 📦 Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: ✅ Auth Check Test
+        if: github.event.inputs.test_type == 'auth-check'
+        run: |
+          echo "🔧 测试 NPM 认证..."
+          npm whoami
+          echo "✅ NPM 用户验证成功: $(npm whoami)"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: 🔨 Build Test
+        if: github.event.inputs.test_type == 'build-only' || github.event.inputs.test_type == 'dry-run'
+        run: |
+          echo "🔨 测试构建流程..."
+
+          # 测试cc-vite-progress构建
+          if [ -f "packages/cc-vite-progress/package.json" ]; then
+            echo "📦 测试构建 cc-vite-progress..."
+            cd packages/cc-vite-progress && yarn build && cd ../..
+          fi
+
+          # 测试fetch-event-source构建
+          if [ -f "packages/fetch-event-source/package.json" ]; then
+            echo "📦 测试构建 fetch-event-source..."
+            cd packages/fetch-event-source && npm run build && cd ../..
+          fi
+
+          # 测试git-pro构建
+          if [ -f "packages/git-pro/package.json" ]; then
+            echo "📦 测试构建 git-pro..."
+            cd packages/git-pro && yarn build && cd ../..
+          fi
+
+          echo "✅ 所有构建测试通过"
+
+      - name: 🧪 Dry Run Test
+        if: github.event.inputs.test_type == 'dry-run'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "🧪 执行 Lerna 发布预演..."
+
+          # 配置git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 配置npm
+          npm config set registry https://registry.npmjs.org/
+
+          # 执行dry-run
+          npx lerna publish --conventional-commits --no-verify-access --yes --dry-run
+
+          echo "✅ Dry run 测试完成"
+
+      - name: 📊 Test Summary
+        if: always()
+        run: |
+          echo "## 🧪 测试结果总结" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **测试类型**: ${{ github.event.inputs.test_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **执行状态**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Node版本**: $(node --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Yarn版本**: $(yarn --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Lerna版本**: $(npx lerna --version)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ github.event.inputs.test_type }}" == "auth-check" ]]; then
+            echo "### 🔐 认证测试" >> $GITHUB_STEP_SUMMARY
+            echo "- NPM用户: $(npm whoami 2>/dev/null || echo '❌ 认证失败')" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 下一步" >> $GITHUB_STEP_SUMMARY
+          echo "如果测试通过，可以使用主发布工作流进行正式发布。" >> $GITHUB_STEP_SUMMARY

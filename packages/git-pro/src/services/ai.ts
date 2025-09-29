@@ -51,7 +51,7 @@ export class AIService {
   private model: string = "";
   private customPrompt: string = "";
   private config: AIConfig | null = null;
-  private readonly configUrl: string = "http://143.20.9.234:8080/config/ai-config.json";
+  private readonly configUrl: string = "https://zfile.nmyh.cc/directlink/1/git-pro/ai-config.json";
 
   private constructor() { }
 
