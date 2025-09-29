@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.2.1](https://github.com/cjh-store/npm-store/compare/@cjh0/git-pro@8.2.0...@cjh0/git-pro@8.2.1) (2025-09-29)
+
+
+### Bug Fixes
+
+* **git-pro:** 完善npmignore规则排除垃圾文件 ([8d7fbe5](https://github.com/cjh-store/npm-store/commit/8d7fbe5013cef1e6254045b83e590590ba2bcb3a))
+
+
+
+
+
 # [8.2.0](https://github.com/cjh-store/npm-store/compare/@cjh0/git-pro@7.0.0...@cjh0/git-pro@8.2.0) (2025-09-29)
 
 
