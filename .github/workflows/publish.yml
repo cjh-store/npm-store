@@ -189,6 +189,7 @@ jobs:
 
       # 9. 智能发布包
       - name: 🚀 Publish Packages
+        id: publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -201,6 +202,9 @@ jobs:
           npm config set registry https://registry.npmjs.org/
 
           TRIGGER="${{ steps.parse.outputs.trigger }}"
+
+          # 初始化发布结果文件
+          echo "" > /tmp/publish_results.txt
 
           if [[ "$TRIGGER" == "tag" ]]; then
             # 标签触发：发布特定包
@@ -226,7 +230,13 @@ jobs:
 
             echo "📦 在目录 $PACKAGE_DIR 中发布包"
             cd "$PACKAGE_DIR"
-            npm publish --access public
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+            if npm publish --access public; then
+              echo "✅ $PACKAGE_NAME@$CURRENT_VERSION" >> /tmp/publish_results.txt
+            else
+              echo "❌ $PACKAGE_NAME 发布失败" >> /tmp/publish_results.txt
+            fi
             cd ../..
 
           elif [[ "$TRIGGER" == "manual" ]]; then
@@ -235,7 +245,19 @@ jobs:
 
             if [[ "$PACKAGES" == "all" ]]; then
               echo "🚀 发布所有已变更的包"
-              npx lerna publish --conventional-commits --no-verify-access --yes
+
+              # 捕获lerna输出并解析
+              if npx lerna publish --conventional-commits --no-verify-access --yes > /tmp/lerna_output.txt 2>&1; then
+                echo "✅ Lerna发布成功"
+                # 提取发布成功的包信息
+                grep "Successfully published:" /tmp/lerna_output.txt || echo "未找到发布信息"
+                grep -E "lerna success published.*@.*" /tmp/lerna_output.txt | sed 's/lerna success published /✅ /' >> /tmp/publish_results.txt
+              else
+                echo "❌ Lerna发布失败"
+                cat /tmp/lerna_output.txt
+                echo "❌ 发布失败" >> /tmp/publish_results.txt
+                exit 1
+              fi
             else
               echo "🎯 发布指定包: $PACKAGES"
 
@@ -259,12 +281,19 @@ jobs:
 
                 if [ -z "$PACKAGE_DIR" ]; then
                   echo "⚠️ 跳过不存在的包: $pkg"
+                  echo "⚠️ $pkg (包不存在)" >> /tmp/publish_results.txt
                   continue
                 fi
 
                 echo "📦 在目录 $PACKAGE_DIR 中发布包 $pkg"
                 cd "$PACKAGE_DIR"
-                npm publish --access public
+                CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+                if npm publish --access public; then
+                  echo "✅ $pkg@$CURRENT_VERSION" >> /tmp/publish_results.txt
+                else
+                  echo "❌ $pkg@$CURRENT_VERSION (发布失败)" >> /tmp/publish_results.txt
+                fi
                 cd ../..
               done
             fi
@@ -272,12 +301,38 @@ jobs:
           elif [[ "$TRIGGER" == "auto" ]]; then
             # 自动触发：基于commit信息发布变更的包
             echo "🤖 自动检测并发布已变更的包"
-            npx lerna publish --conventional-commits --no-verify-access --yes
+
+            # 捕获lerna输出并解析发布信息
+            if npx lerna publish --conventional-commits --no-verify-access --yes > /tmp/lerna_output.txt 2>&1; then
+              echo "✅ Lerna自动发布成功"
+              cat /tmp/lerna_output.txt
+
+              # 提取发布成功的包信息
+              if grep -q "Successfully published:" /tmp/lerna_output.txt; then
+                echo "📦 发布的包:"
+                grep -A 20 "Successfully published:" /tmp/lerna_output.txt | grep -E "^\s*-\s*.*@.*" | sed 's/^\s*-\s*/✅ /' >> /tmp/publish_results.txt
+              elif grep -q "lerna success published.*@" /tmp/lerna_output.txt; then
+                # 提取版本信息
+                grep -E "lerna success published.*@.*" /tmp/lerna_output.txt | sed 's/lerna success published /✅ /' >> /tmp/publish_results.txt
+              else
+                echo "📦 未检测到需要发布的包变更" >> /tmp/publish_results.txt
+              fi
+            else
+              echo "❌ Lerna自动发布失败"
+              cat /tmp/lerna_output.txt
+              echo "❌ 自动发布失败" >> /tmp/publish_results.txt
+              exit 1
+            fi
 
           else
             echo "❌ 未知触发类型: $TRIGGER"
             exit 1
           fi
+
+          # 将发布结果保存为输出变量
+          echo "PUBLISH_RESULTS<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/publish_results.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       # 10. 发布结果通知
       - name: 📊 Publish Summary
@@ -291,10 +346,10 @@ jobs:
           echo "### 🎯 触发信息" >> $GITHUB_STEP_SUMMARY
           if [[ "$TRIGGER" == "tag" ]]; then
             echo "- **触发方式**: 🏷️ 标签触发" >> $GITHUB_STEP_SUMMARY
-            echo "- **发布包**: ${{ steps.parse.outputs.package }}@${{ steps.parse.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **目标包**: ${{ steps.parse.outputs.package }}@${{ steps.parse.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           elif [[ "$TRIGGER" == "manual" ]]; then
             echo "- **触发方式**: 🖱️ 手动触发" >> $GITHUB_STEP_SUMMARY
-            echo "- **发布包**: ${{ steps.parse.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **发布范围**: ${{ steps.parse.outputs.packages }}" >> $GITHUB_STEP_SUMMARY
           elif [[ "$TRIGGER" == "auto" ]]; then
             echo "- **触发方式**: 🤖 自动触发" >> $GITHUB_STEP_SUMMARY
             echo "- **发布范围**: 检测到变更的包" >> $GITHUB_STEP_SUMMARY
@@ -304,6 +359,24 @@ jobs:
           echo "- **执行时间**: $(date)" >> $GITHUB_STEP_SUMMARY
           echo "- **Node版本**: $(node --version)" >> $GITHUB_STEP_SUMMARY
           echo "- **NPM用户**: $(npm whoami 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # 显示发布结果详情
+          echo "### 📋 发布详情" >> $GITHUB_STEP_SUMMARY
+          if [[ -n "${{ steps.publish.outputs.PUBLISH_RESULTS }}" ]]; then
+            echo "${{ steps.publish.outputs.PUBLISH_RESULTS }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            # 统计发布结果
+            SUCCESS_COUNT=$(echo "${{ steps.publish.outputs.PUBLISH_RESULTS }}" | grep -c "✅" || echo "0")
+            FAIL_COUNT=$(echo "${{ steps.publish.outputs.PUBLISH_RESULTS }}" | grep -c "❌" || echo "0")
+
+            echo "**📊 发布统计**:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ 成功: ${SUCCESS_COUNT} 个包" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ 失败: ${FAIL_COUNT} 个包" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "暂无发布结果信息" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
 
           echo "### 🔗 快速链接" >> $GITHUB_STEP_SUMMARY
