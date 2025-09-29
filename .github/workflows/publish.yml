@@ -180,7 +180,28 @@ jobs:
             # 标签触发：发布特定包
             PACKAGE_NAME="${{ steps.parse.outputs.package }}"
             echo "🎯 发布单个包: $PACKAGE_NAME"
-            npx lerna publish from-package --no-verify-access --yes --scope="$PACKAGE_NAME"
+
+            # 查找包目录
+            PACKAGE_DIR=""
+            for dir in packages/*/; do
+              if [ -f "${dir}package.json" ]; then
+                PKG_NAME=$(node -p "require('./${dir}package.json').name")
+                if [ "$PKG_NAME" = "$PACKAGE_NAME" ]; then
+                  PACKAGE_DIR="$dir"
+                  break
+                fi
+              fi
+            done
+
+            if [ -z "$PACKAGE_DIR" ]; then
+              echo "❌ 找不到包: $PACKAGE_NAME"
+              exit 1
+            fi
+
+            echo "📦 在目录 $PACKAGE_DIR 中发布包"
+            cd "$PACKAGE_DIR"
+            npm publish --access public
+            cd ../..
 
           elif [[ "$TRIGGER" == "manual" ]]; then
             # 手动触发：根据选择发布
@@ -191,12 +212,34 @@ jobs:
               npx lerna publish --conventional-commits --no-verify-access --yes
             else
               echo "🎯 发布指定包: $PACKAGES"
+
               # 处理多个包的情况
               IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
               for pkg in "${PKG_ARRAY[@]}"; do
                 pkg=$(echo "$pkg" | xargs)  # 去除空格
-                echo "📦 发布包: $pkg"
-                npx lerna publish from-package --no-verify-access --yes --scope="$pkg"
+                echo "📦 正在发布包: $pkg"
+
+                # 查找包目录
+                PACKAGE_DIR=""
+                for dir in packages/*/; do
+                  if [ -f "${dir}package.json" ]; then
+                    PKG_NAME=$(node -p "require('./${dir}package.json').name")
+                    if [ "$PKG_NAME" = "$pkg" ]; then
+                      PACKAGE_DIR="$dir"
+                      break
+                    fi
+                  fi
+                done
+
+                if [ -z "$PACKAGE_DIR" ]; then
+                  echo "⚠️ 跳过不存在的包: $pkg"
+                  continue
+                fi
+
+                echo "📦 在目录 $PACKAGE_DIR 中发布包 $pkg"
+                cd "$PACKAGE_DIR"
+                npm publish --access public
+                cd ../..
               done
             fi
 
