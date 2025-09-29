@@ -112,18 +112,44 @@ jobs:
           # 检查并构建git-pro
           if [ -f "packages/git-pro/package.json" ]; then
             echo "📦 构建 git-pro..."
-            cd packages/git-pro && yarn build && cd ../..
+            cd packages/git-pro
+            yarn build
+            # 清理构建过程中产生的垃圾文件
+            rm -f nul
+            cd ../..
           fi
 
           echo "✅ 构建完成"
 
-      # 6. Git配置 (lerna需要)
+      # 6. 清理工作树
+      - name: 🧹 Clean Working Tree
+        run: |
+          echo "🧹 清理工作树中的构建产物..."
+
+          # 重置所有修改的文件（构建可能会修改一些文件）
+          git checkout -- . 2>/dev/null || true
+
+          # 删除未跟踪的文件
+          git clean -fd
+
+          # 检查工作树状态
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "⚠️ 工作树仍有变更："
+            git status --short
+            echo "🔧 尝试提交这些变更..."
+            git add -A
+            git commit -m "chore: 自动提交构建产物 [skip ci]" || echo "没有需要提交的内容"
+          else
+            echo "✅ 工作树干净"
+          fi
+
+      # 7. Git配置 (lerna需要)
       - name: ⚙️ Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      # 7. 解析触发方式和包
+      # 8. 解析触发方式和包
       - name: 🎯 Parse Trigger & Packages
         id: parse
         run: |
@@ -161,7 +187,7 @@ jobs:
             exit 1
           fi
 
-      # 8. 智能发布包
+      # 9. 智能发布包
       - name: 🚀 Publish Packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -253,7 +279,7 @@ jobs:
             exit 1
           fi
 
-      # 9. 发布结果通知
+      # 10. 发布结果通知
       - name: 📊 Publish Summary
         if: always()
         run: |
@@ -285,7 +311,7 @@ jobs:
           echo "- [📝 Lerna文档](https://lerna.js.org/)" >> $GITHUB_STEP_SUMMARY
           echo "- [🏷️ 项目Releases](https://github.com/${{ github.repository }}/releases)" >> $GITHUB_STEP_SUMMARY
 
-      # 10. 通知失败
+      # 11. 通知失败
       - name: 🚨 Notify on Failure
         if: failure()
         run: |
