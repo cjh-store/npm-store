@@ -1,11 +1,13 @@
 name: 📦 Publish Packages
 
 on:
-  # 推送到主分支：自动发布有变更的包
+  # 推送触发：主分支自动发布 + 标签发布
   push:
     branches:
       - main
       - master
+    tags:
+      - '*@*'  # 格式 package-name@version
 
   # 手动触发：选择性发布
   workflow_dispatch:
@@ -28,11 +30,6 @@ on:
         required: false
         default: false
         type: boolean
-
-  # 标签触发：格式 package-name@version（兼容手动标签发布）
-  push:
-    tags:
-      - '*@*'
 
 jobs:
   publish:
