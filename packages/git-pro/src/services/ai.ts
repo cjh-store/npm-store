@@ -19,6 +19,18 @@ interface AIConfig {
   };
   model: {
     default: string;
+    parameters?: {
+      // 所有API参数都可以通过此配置动态传入
+      // 常用参数示例：
+      enable_thinking?: boolean;
+      temperature?: number;
+      max_tokens?: number;
+      top_p?: number;
+      frequency_penalty?: number;
+      presence_penalty?: number;
+      // 任何其他API参数都可以在这里添加，无需修改代码
+      [key: string]: any;
+    };
   };
   prompt: {
     systemPrompt: string;
@@ -255,16 +267,28 @@ ${JSON.stringify(this.config.prompt.outputFormat.example, null, 2)}
       // 直接使用API密钥，不需要解码
       const apiKey = this.apiKey;
 
+      // 构建基础请求参数（核心参数，不可覆盖）
+      const requestBody: any = {
+        model: this.model,
+        messages: [{ role: "user", content: prompt }]
+      };
+
+      // 设置默认参数
+      const defaultParams = {
+        temperature: 0.3,
+        max_tokens: 2000,
+        top_p: 0.7
+      };
+
+      // 从配置中获取模型参数
+      const modelParams = this.config.model.parameters || {};
+
+      // 合并参数：默认参数 + 配置参数（配置参数优先级更高）
+      Object.assign(requestBody, defaultParams, modelParams);
+
       const response = await axios.post(
         url,
-        {
-          model: this.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3,
-          max_tokens: 2000,  // 增加到2000以支持更多代码提交
-          enable_thinking: false,
-          top_p: 0.7
-        },
+        requestBody,
         {
           headers: {
             "Content-Type": "application/json",
