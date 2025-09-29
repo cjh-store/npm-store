@@ -151,7 +151,9 @@ export class AIService {
       this.config = response.data;
       
       // 保存到缓存
-      this.saveConfigToCache(this.config);
+      if (this.config) {
+        this.saveConfigToCache(this.config);
+      }
       
       this.applyConfig();
       Logger.info("☁️ 已加载远程 AI 配置");
