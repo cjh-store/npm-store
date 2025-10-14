@@ -186,8 +186,9 @@ export class TagService {
           }
           resolve();
         });
-
-        clipProcess.stdin.end(iconv.encode(`版本号:${text}`, "gbk"));
+        // 根据平台选择合适的编码
+        const encodedText = iconv.encode(`版本号:${text}`, encoding);
+        clipProcess.stdin.end(encodedText);
       });
 
       Logger.success("📋  版本号已复制到剪贴板");
