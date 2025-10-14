@@ -154,11 +154,32 @@ export class TagService {
 
   private async copyToClipboard(text: string): Promise<void> {
     try {
+      const os = require("os");
       const { exec } = require("child_process");
       const iconv = require("iconv-lite");
+      const platform = os.platform();
+
+      let command: string;
+      let encoding = "utf8";
+
+      switch (platform) {
+        case "win32":
+          command = "clip";
+          encoding = "gbk"; // Windows 中文系统可能需要 gbk 编码
+          break;
+        case "darwin": // macOS
+          command = "pbcopy";
+          break;
+        case "linux":
+          command = "xclip -selection clipboard";
+          break;
+        default:
+          Logger.warn(`📋 不支持的操作系统: ${platform}，跳过复制到剪贴板`);
+          return;
+      }
 
       await new Promise<void>((resolve, reject) => {
-        const clipProcess = exec("clip", (error: Error | null) => {
+        const clipProcess = exec(command, (error: Error | null) => {
           if (error) {
             reject(error);
             return;
