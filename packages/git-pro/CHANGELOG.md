@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [8.2.5](https://github.com/cjh-store/npm-store/compare/@cjh0/git-pro@8.2.4...@cjh0/git-pro@8.2.5) (2025-10-17)
+
+**Note:** Version bump only for package @cjh0/git-pro
+
+
+
+
+
 ## [8.2.4](https://github.com/cjh-store/npm-store/compare/@cjh0/git-pro@8.2.3...@cjh0/git-pro@8.2.4) (2025-10-17)
 
 **Note:** Version bump only for package @cjh0/git-pro
