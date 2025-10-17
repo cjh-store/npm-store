@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Logger } from "../utils/logger";
 import { gitService } from "./git";
+import { configService } from "./config";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -12,6 +13,30 @@ interface CzConfigForAI {
   }>;
   scopes?: string[];
   rawContent?: string;
+}
+
+interface CzConfig {
+  types: Array<{
+    value: string;
+    name: string;
+  }>;
+  messages?: {
+    type?: string;
+    scope?: string;
+    customScope?: string;
+    subject?: string;
+    body?: string;
+    breaking?: string;
+    footerPrefixes?: string;
+    footer?: string;
+    confirmCommit?: string;
+  };
+  scopes?: string[];
+  allowCustomScopes?: boolean;
+  allowBreakingChanges?: string[];
+  breaklineChar?: string;
+  skipQuestions?: string[];
+  subjectLimit?: number;
 }
 
 interface CachedConfig {
@@ -268,9 +293,14 @@ export class AIService {
     if (!this.config) {
       throw new Error("❌ 配置未加载，无法获取 commitizen 配置");
     }
+
+    // 尝试读取本地配置
+    const localConfig = await this.loadLocalConfig();
+
+    // 合并策略：本地配置优先
     return {
-      types: this.config.defaultTypes,
-      scopes: this.config.defaultScopes,
+      types: localConfig?.types || this.config.defaultTypes,
+      scopes: localConfig?.scopes || this.config.defaultScopes,
     };
   }
 
@@ -285,6 +315,25 @@ export class AIService {
       types: this.config.defaultTypes,
       scopes: this.config.defaultScopes,
     };
+  }
+
+  /**
+   * 加载本地配置文件
+   */
+  private async loadLocalConfig(): Promise<CzConfig | null> {
+    const configPath = configService.getConfigPath();
+    if (!configPath) {
+      return null;
+    }
+
+    try {
+      const absolutePath = path.resolve(configPath);
+      delete require.cache[absolutePath];
+      return require(absolutePath);
+    } catch (error: any) {
+      Logger.warn(`读取本地配置失败: ${error.message}，将使用远程配置`);
+      return null;
+    }
   }
 
   /**

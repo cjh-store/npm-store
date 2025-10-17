@@ -101,3 +101,5 @@ dist
 
 # Qoder IDE 配置文件
 .qoder/
+
+!.github/
