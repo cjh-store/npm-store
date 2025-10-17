@@ -3,6 +3,9 @@ import dayjs from "dayjs";
 import inquirer from "inquirer";
 import { Logger } from "../utils/logger";
 import chalk from "chalk";
+import * as os from "os";
+import { exec } from "child_process";
+import * as iconv from "iconv-lite";
 
 interface VersionBumpChoice {
   name: string;
@@ -154,9 +157,6 @@ export class TagService {
 
   private async copyToClipboard(text: string): Promise<void> {
     try {
-      const os = require("os");
-      const { exec } = require("child_process");
-      const iconv = require("iconv-lite");
       const platform = os.platform();
 
       let command: string;
@@ -186,14 +186,26 @@ export class TagService {
           }
           resolve();
         });
+
         // 根据平台选择合适的编码
         const encodedText = iconv.encode(`版本号:${text}`, encoding);
-        clipProcess.stdin.end(encodedText);
+        if (clipProcess.stdin) {
+          clipProcess.stdin.end(encodedText);
+        } else {
+          reject(new Error("无法访问进程的标准输入"));
+        }
       });
 
       Logger.success("📋  版本号已复制到剪贴板");
-    } catch (error) {
-      Logger.warn("⚠️  复制到剪贴板失败");
+    } catch (error: any) {
+      const platform = os.platform();
+
+      if (platform === "linux" && error.message?.includes("not found")) {
+        Logger.warn("⚠️  复制失败：未找到 xclip 命令");
+        Logger.info("💡 请安装 xclip: sudo apt install xclip (Ubuntu/Debian) 或 sudo yum install xclip (CentOS/RHEL)");
+      } else {
+        Logger.warn(`⚠️  复制到剪贴板失败: ${error.message || error}`);
+      }
     }
   }
 }
